@@ -30,11 +30,7 @@ export default merge(baseConfig, {
         enforce: 'post',
       },
       {
-        test: /\.png$/,
-        use: ['file-loader'],
-      },
-      {
-        test: /\.svg$/,
+        test: /\.(png|svg|webp)$/,
         use: ['file-loader'],
       },
       {
