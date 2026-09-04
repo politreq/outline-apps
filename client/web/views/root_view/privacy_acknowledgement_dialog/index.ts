@@ -14,7 +14,7 @@
 import {LitElement, html, css} from 'lit';
 import {customElement, property} from 'lit/decorators.js';
 
-import privacyLock from '../../../assets/privacy-lock.png';
+import vDomikeLogo from '../../../assets/v-domike-logo.png';
 
 @customElement('privacy-acknowledgement-dialog')
 export class PrivacyAcknowledgementDialog extends LitElement {
@@ -64,8 +64,11 @@ export class PrivacyAcknowledgementDialog extends LitElement {
     }
 
     img {
-      width: 112px;
-      height: 158px;
+      width: 128px;
+      height: 128px;
+      border-radius: 28px;
+      box-shadow: 0 10px 28px rgb(74 44 29 / 18%);
+      object-fit: cover;
       pointer-events: none;
       -webkit-user-select: none;
       user-select: none;
@@ -107,7 +110,7 @@ export class PrivacyAcknowledgementDialog extends LitElement {
       >
         <article slot="content">
           <figure>
-            <img alt="Privacy lock" src="${privacyLock}" />
+            <img alt="Логотип В домике" src="${vDomikeLogo}" />
           </figure>
           <h2>${this.localize('privacy-title')}</h2>
           <p>${this.localize('privacy-text')}</p>
