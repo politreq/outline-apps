@@ -16,6 +16,32 @@ Interested in **contributing to Outline?** See our [Contributing Guide](CONTRIBU
 
 See [AGENTS.md](./AGENTS.md) for AI agent and developer guidance.
 
+## «В домике»: самостоятельные обновления Android
+
+Android-клиент автоматически проверяет стабильный HTTPS manifest:
+
+```text
+https://82.38.68.250.sslip.io/v-domike/latest.json
+```
+
+Новая версия предлагается только когда опубликованный `versionCode` больше
+установленного. Перед запуском системного установщика клиент проверяет HTTPS,
+размер, SHA-256, package id, `versionCode` и совпадение сертификата подписи.
+Android всё равно просит пользователя явно подтвердить установку и при первом
+обновлении может попросить разрешить установку из «В домике».
+
+Публикация выполняется с последним реально распространённым APK как baseline:
+
+```bash
+scripts/publish-app-update.sh \
+  /path/to/new.apk \
+  "Краткое описание изменений" \
+  /path/to/previously-published.apk
+```
+
+Скрипт сначала публикует versioned APK, проверяет package, версию и непрерывность
+подписи, а затем атомарно переключает `latest.json`.
+
 You can also **join the Outline Community** by signing up for the [IFF Mattermost](https://wiki.digitalrights.community/index.php?title=IFF_Mattermost)!
 
 For customer support and to **contact us directly**, go to https://support.getoutline.org.

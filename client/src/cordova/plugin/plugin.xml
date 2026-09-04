@@ -40,6 +40,7 @@
       <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
       <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
       <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+      <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     </config-file>
 
     <config-file target="app/src/main/AndroidManifest.xml" parent="/manifest/application">
@@ -81,10 +82,23 @@
       </service>
 
       <meta-data android:name="io.sentry.auto-init" android:value="false" />
+
+      <provider
+        android:name="androidx.core.content.FileProvider"
+        android:authorities="${applicationId}.update.fileprovider"
+        android:exported="false"
+        android:grantUriPermissions="true">
+        <meta-data
+          android:name="android.support.FILE_PROVIDER_PATHS"
+          android:resource="@xml/update_file_paths" />
+      </provider>
     </config-file>
 
     <source-file
       src="android/java/org/outline/OutlinePlugin.java"
+      target-dir="app/src/main/java/org/outline" />
+    <source-file
+      src="android/java/org/outline/AppUpdateManager.java"
       target-dir="app/src/main/java/org/outline" />
     <resource-file src="android/res/" target="res/" />
     <framework src="android/build-extras.gradle" custom="true" type="gradleReference" />

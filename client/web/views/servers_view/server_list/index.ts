@@ -17,6 +17,11 @@ import '@polymer/iron-icons/iron-icons.js';
 import {css, html, LitElement} from 'lit';
 import {customElement, property, state} from 'lit/decorators.js';
 
+import {
+  AndroidAppUpdater,
+  AppRelease,
+  isAndroidAppUpdateSupported,
+} from '../../../app/app_update';
 import dayOn from '../../../assets/home/day-on.webp';
 import dayOff from '../../../assets/home/day.webp';
 import eveningOn from '../../../assets/home/evening-on.webp';
@@ -29,6 +34,13 @@ import {ServerConnectionState} from '../server_connection_indicator';
 import {ServerListItem, ServerListItemEvent} from '../server_list_item';
 
 type TimePeriod = 'morning' | 'day' | 'evening' | 'night';
+type AppUpdateState =
+  | 'hidden'
+  | 'available'
+  | 'downloading'
+  | 'permission'
+  | 'installing'
+  | 'error';
 
 const SCENES: Record<
   TimePeriod,
@@ -97,8 +109,13 @@ export class ServerList extends LitElement {
   @state() private selectedServerId = '';
   @state() private period: TimePeriod = getMoscowTime().period;
   @state() private moscowTime = getMoscowTime().time;
+  @state() private appUpdateState: AppUpdateState = 'hidden';
+  @state() private appUpdateRelease?: AppRelease;
+  @state() private downloadedUpdatePath = '';
 
   private clockTimer?: number;
+  private updateCheckTimer?: number;
+  private readonly appUpdater = new AndroidAppUpdater();
 
   static styles = css`
     :host {
@@ -149,6 +166,80 @@ export class ServerList extends LitElement {
       border: 1px solid var(--home-line);
       border-radius: 18px;
       box-shadow: 0 7px 20px rgb(89 55 30 / 12%);
+    }
+
+    .update-card {
+      display: grid;
+      margin: 0 2px 10px;
+      padding: 11px 12px;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      color: var(--home-ink);
+      background: #f0f5dc;
+      border: 1px solid #b7c987;
+      border-radius: 18px;
+      box-shadow: 0 7px 18px rgb(83 118 41 / 10%);
+    }
+    .update-card.error {
+      background: var(--home-off-pale);
+      border-color: #d8aaa1;
+    }
+    .update-icon {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      color: white;
+      background: var(--home-green);
+      border-radius: 12px;
+    }
+    .update-card.error .update-icon {
+      background: var(--home-off);
+    }
+    .update-icon md-icon {
+      color: inherit;
+      font-size: 21px;
+    }
+    .update-copy {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .update-copy strong {
+      font-size: 13px;
+    }
+    .update-copy small {
+      display: -webkit-box;
+      overflow: hidden;
+      color: var(--home-muted);
+      font-size: 11px;
+      line-height: 1.25;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+    .update-action {
+      min-height: 34px;
+      padding: 0 11px;
+      color: white;
+      background: var(--home-green-dark);
+      border: 0;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .update-card.error .update-action {
+      background: var(--home-off);
+    }
+    .update-action:disabled {
+      cursor: default;
+      opacity: 0.65;
+    }
+    .update-spinner {
+      animation: update-spin 1s linear infinite;
     }
 
     .time-chip md-icon {
@@ -466,6 +557,11 @@ export class ServerList extends LitElement {
         transform: translate3d(-0.35%, 0.16%, 0) scale(1.006);
       }
     }
+    @keyframes update-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
 
     @media (prefers-reduced-motion: reduce) {
       .scene-layer--on {
@@ -481,11 +577,130 @@ export class ServerList extends LitElement {
     super.connectedCallback();
     this.updateClock();
     this.clockTimer = window.setInterval(() => this.updateClock(), 30_000);
+    if (isAndroidAppUpdateSupported()) {
+      this.updateCheckTimer = window.setTimeout((): void => {
+        void this.checkForAppUpdate();
+      }, 1_200);
+    }
   }
 
   disconnectedCallback() {
     if (this.clockTimer) window.clearInterval(this.clockTimer);
+    if (this.updateCheckTimer) window.clearTimeout(this.updateCheckTimer);
     super.disconnectedCallback();
+  }
+
+  private async checkForAppUpdate() {
+    try {
+      const result = await this.appUpdater.check();
+      if (result.available) {
+        this.appUpdateRelease = result;
+        this.appUpdateState = 'available';
+      } else {
+        this.appUpdateState = 'hidden';
+      }
+    } catch (error) {
+      // A background check must never interrupt normal VPN use.
+      console.warn('App update check failed', error);
+      this.appUpdateState = 'hidden';
+    }
+  }
+
+  private async downloadAppUpdate() {
+    this.appUpdateState = 'downloading';
+    try {
+      const update = await this.appUpdater.download();
+      this.appUpdateRelease = update;
+      this.downloadedUpdatePath = update.filePath;
+      await this.installAppUpdate();
+    } catch (error) {
+      console.error('App update download failed', error);
+      this.appUpdateState = 'error';
+    }
+  }
+
+  private async installAppUpdate() {
+    if (!this.downloadedUpdatePath) {
+      await this.downloadAppUpdate();
+      return;
+    }
+    try {
+      const result = await this.appUpdater.install(this.downloadedUpdatePath);
+      this.appUpdateState =
+        result.status === 'permission_required' ? 'permission' : 'installing';
+    } catch (error) {
+      console.error('App update installer failed', error);
+      this.appUpdateState = 'error';
+    }
+  }
+
+  private renderAppUpdate() {
+    if (this.appUpdateState === 'hidden') return html``;
+    const release = this.appUpdateRelease;
+    const busy = ['downloading', 'installing'].includes(this.appUpdateState);
+    const title =
+      this.appUpdateState === 'available'
+        ? `Вышла версия ${release?.versionName ?? ''}`
+        : this.appUpdateState === 'downloading'
+          ? 'Скачиваем обновление…'
+          : this.appUpdateState === 'permission'
+            ? 'Разрешите установку'
+            : this.appUpdateState === 'installing'
+              ? 'Подтвердите установку'
+              : 'Не удалось обновиться';
+    const details =
+      this.appUpdateState === 'available'
+        ? release?.releaseNotes || 'Новая версия «В домике» уже готова.'
+        : this.appUpdateState === 'permission'
+          ? 'Включите разрешение для «В домике», затем нажмите «Продолжить».'
+          : this.appUpdateState === 'installing'
+            ? 'Открылось системное окно Android.'
+            : this.appUpdateState === 'error'
+              ? 'Проверьте интернет и попробуйте ещё раз.'
+              : 'Проверяем файл и подпись перед установкой.';
+    const action =
+      this.appUpdateState === 'permission'
+        ? 'Продолжить'
+        : this.appUpdateState === 'error'
+          ? 'Повторить'
+          : this.appUpdateState === 'installing'
+            ? 'Открыть'
+            : this.appUpdateState === 'downloading'
+              ? 'Подождите'
+              : 'Обновить';
+
+    return html`
+      <aside
+        class="update-card ${this.appUpdateState === 'error' ? 'error' : ''}"
+        role="status"
+      >
+        <span class="update-icon">
+          <md-icon class=${busy ? 'update-spinner' : ''}
+            >${busy
+              ? 'sync'
+              : this.appUpdateState === 'error'
+                ? 'error'
+                : 'system_update'}</md-icon
+          >
+        </span>
+        <span class="update-copy">
+          <strong>${title}</strong>
+          <small>${details}</small>
+        </span>
+        <button
+          class="update-action"
+          type="button"
+          ?disabled=${this.appUpdateState === 'downloading'}
+          @click=${() =>
+            this.appUpdateState === 'available' ||
+            this.appUpdateState === 'error'
+              ? this.downloadAppUpdate()
+              : this.installAppUpdate()}
+        >
+          ${action}
+        </button>
+      </aside>
+    `;
   }
 
   private updateClock() {
@@ -548,6 +763,7 @@ export class ServerList extends LitElement {
     const scene = SCENES[this.period];
 
     return html`
+      ${this.renderAppUpdate()}
       <div class="time-chip">
         <md-icon>${scene.icon}</md-icon>
         <strong>${scene.greeting}</strong>
