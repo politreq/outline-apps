@@ -65,4 +65,5 @@ dependencies {
   implementation 'org.outline:outline:0.0'
   // From local Maven directory.
   implementation 'org.getoutline.client:tun2socks:0.0.1'
+  implementation 'androidx.core:core:1.16.0'
 }

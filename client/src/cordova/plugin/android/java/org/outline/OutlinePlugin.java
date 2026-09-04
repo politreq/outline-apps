@@ -68,6 +68,9 @@ public class OutlinePlugin extends CordovaPlugin {
     INIT_ERROR_REPORTING("initializeErrorReporting"),
     REPORT_EVENTS("reportEvents"),
     OPEN_APP_ROUTING_SETTINGS("openAppRoutingSettings"),
+    CHECK_APP_UPDATE("checkAppUpdate"),
+    DOWNLOAD_APP_UPDATE("downloadAppUpdate"),
+    INSTALL_APP_UPDATE("installAppUpdate"),
     QUIT("quitApplication");
 
     private final static Map<String, Action> actions = new HashMap<>();
@@ -235,6 +238,15 @@ public class OutlinePlugin extends CordovaPlugin {
           boolean isActive = isTunnelActive(tunnelId);
           callback.sendPluginResult(new PluginResult(PluginResult.Status.OK, isActive));
 
+        // Self-hosted Android app updates.
+        } else if (Action.CHECK_APP_UPDATE.is(action)) {
+          callback.success(new AppUpdateManager(getBaseContext()).checkForUpdate());
+        } else if (Action.DOWNLOAD_APP_UPDATE.is(action)) {
+          callback.success(new AppUpdateManager(getBaseContext()).downloadLatestUpdate());
+        } else if (Action.INSTALL_APP_UPDATE.is(action)) {
+          callback.success(
+              new AppUpdateManager(getBaseContext()).installDownloadedUpdate(args.getString(0)));
+
           // Static actions
         } else if (Action.INIT_ERROR_REPORTING.is(action)) {
           errorReportingApiKey = args.getString(0);
@@ -250,6 +262,8 @@ public class OutlinePlugin extends CordovaPlugin {
           throw new IllegalArgumentException(
               String.format(Locale.ROOT, "Unexpected action %s", action));
         }
+      } catch (AppUpdateManager.AppUpdateException e) {
+        callback.error(e.toJson());
       } catch (Exception e) {
         LOG.log(Level.SEVERE,
             String.format(Locale.ROOT, "Unexpected error while executing action: %s", action), e);
