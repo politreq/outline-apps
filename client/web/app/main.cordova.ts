@@ -38,6 +38,10 @@ import {SentryErrorReporter, Tags} from '../shared/error_reporter';
 
 const hasDeviceSupport = cordova.platformId !== 'browser';
 
+// Android already lays out the WebView below the system status bar. Mark the
+// platform so the shared safe-area token does not reserve that space twice.
+document.documentElement.classList.add(`platform-${cordova.platformId}`);
+
 // Pushes a clipboard event whenever the app is brought to the foreground.
 class CordovaClipboard extends AbstractClipboard {
   getContents() {
