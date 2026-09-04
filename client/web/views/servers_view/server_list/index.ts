@@ -305,6 +305,7 @@ export class ServerList extends LitElement {
     /* Keep the sky fixed: only rooms, attic, door and porch lamp change. */
     .scene-layer--on .house-image {
       clip-path: inset(54% 29% 2.5% 29% round 32% 32% 4% 4%);
+      filter: brightness(1.18) contrast(1.14) saturate(1.24);
     }
 
     .house-image,
@@ -388,25 +389,33 @@ export class ServerList extends LitElement {
       top: 50%;
       left: 50%;
       display: grid;
-      width: max-content;
+      width: 66px;
+      height: 66px;
       transform: translate(-50%, -50%);
       place-items: center;
-      gap: 4px;
+      background: rgb(82 43 40 / 68%);
+      border: 2px solid rgb(255 239 220 / 48%);
+      border-radius: 50%;
+      box-shadow: 0 5px 14px rgb(38 20 17 / 48%);
+      transition:
+        background-color 500ms ease,
+        border-color 500ms ease,
+        box-shadow 500ms ease,
+        transform 160ms ease;
+    }
+    .door-button.connected .door-button-content {
+      background: rgb(91 143 48 / 92%);
+      border-color: #e2f3aa;
+      box-shadow:
+        0 0 0 5px rgb(199 228 117 / 28%),
+        0 0 30px rgb(200 235 112 / 88%),
+        0 5px 14px rgb(38 20 17 / 42%);
     }
     .power-icon {
       color: #fffdf0;
-      width: 54px;
-      height: 54px;
+      width: 48px;
+      height: 48px;
       pointer-events: none;
-    }
-    .door-label {
-      padding: 3px 7px;
-      color: #fff8ec;
-      background: rgb(72 41 33 / 70%);
-      border-radius: 8px;
-      font-size: 9px;
-      font-weight: 700;
-      white-space: nowrap;
     }
 
     .connection-pill {
@@ -777,7 +786,7 @@ export class ServerList extends LitElement {
         ${this.renderSceneLayer(scene.off, false)}
         ${this.renderSceneLayer(scene.on, true)}
         <button
-          class="door-button"
+          class="door-button ${connected ? 'connected' : 'disconnected'}"
           type="button"
           aria-label=${connected ? 'Отключить VPN' : 'Включить VPN'}
           aria-pressed=${connected ? 'true' : 'false'}
@@ -786,9 +795,6 @@ export class ServerList extends LitElement {
         >
           <span class="door-button-content">
             <iron-icon class="power-icon" icon="power-settings-new"></iron-icon>
-            <span class="door-label"
-              >${connected ? 'Выключить' : 'Включить'}</span
-            >
           </span>
         </button>
       </figure>
