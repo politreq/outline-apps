@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {pluginExec} from './plugin.cordova';
+import {pluginExec, pluginExecWithProgress} from './plugin.cordova';
 
 export interface AppRelease {
   schemaVersion: number;
@@ -36,6 +36,13 @@ export interface DownloadedAppUpdate extends AppRelease {
   filePath: string;
 }
 
+export interface AppUpdateDownloadProgress {
+  type: 'progress';
+  downloadedBytes: number;
+  totalBytes: number;
+  percent: number;
+}
+
 export type AppUpdateInstallStatus = 'permission_required' | 'installer_opened';
 
 interface CordovaHost {
@@ -55,13 +62,37 @@ export function isUpdateAvailable(
   return releaseVersionCode > installedVersionCode;
 }
 
+export function isAppUpdateDownloadProgress(
+  candidate: unknown
+): candidate is AppUpdateDownloadProgress {
+  if (!candidate || typeof candidate !== 'object') return false;
+  const progress = candidate as Partial<AppUpdateDownloadProgress>;
+  return (
+    progress.type === 'progress' &&
+    typeof progress.downloadedBytes === 'number' &&
+    progress.downloadedBytes >= 0 &&
+    typeof progress.totalBytes === 'number' &&
+    progress.totalBytes > 0 &&
+    progress.downloadedBytes <= progress.totalBytes &&
+    typeof progress.percent === 'number' &&
+    Number.isInteger(progress.percent) &&
+    progress.percent >= 0 &&
+    progress.percent <= 100
+  );
+}
+
 export class AndroidAppUpdater {
   check(): Promise<AppUpdateCheck> {
     return pluginExec<AppUpdateCheck>('checkAppUpdate');
   }
 
-  download(): Promise<DownloadedAppUpdate> {
-    return pluginExec<DownloadedAppUpdate>('downloadAppUpdate');
+  download(
+    onProgress: (progress: AppUpdateDownloadProgress) => void = () => {}
+  ): Promise<DownloadedAppUpdate> {
+    return pluginExecWithProgress<
+      DownloadedAppUpdate,
+      AppUpdateDownloadProgress
+    >('downloadAppUpdate', onProgress, isAppUpdateDownloadProgress);
   }
 
   install(filePath: string): Promise<{status: AppUpdateInstallStatus}> {

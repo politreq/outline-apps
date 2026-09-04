@@ -12,6 +12,7 @@
 */
 
 import {html} from 'lit';
+import {ref} from 'lit/directives/ref.js';
 
 import './index';
 import type {AboutView} from './index';
@@ -28,6 +29,45 @@ export default {
 
 export const Example = ({build, version}: AboutView) => html`
   <about-view
+    build=${build}
+    version=${version}
+    .localize=${localize}
+  ></about-view>
+`;
+
+const showDownloadProgress = (element?: Element) => {
+  if (!element) return;
+  const aboutView = element as unknown as {
+    updateStatus: string;
+    updateRelease: {versionName: string; releaseNotes: string};
+    downloadProgress: number;
+  };
+  aboutView.updateStatus = 'downloading';
+  aboutView.updateRelease = {
+    versionName: '1.1.3',
+    releaseNotes: 'Добавлен прогресс загрузки обновления.',
+  };
+  aboutView.downloadProgress = 43;
+};
+
+export const DownloadingUpdate = ({build, version}: AboutView) => html`
+  <about-view
+    ${ref(showDownloadProgress)}
+    build=${build}
+    version=${version}
+    .localize=${localize}
+  ></about-view>
+`;
+
+const showUpdateVerification = (element?: Element) => {
+  showDownloadProgress(element);
+  if (!element) return;
+  (element as unknown as {downloadProgress: number}).downloadProgress = 100;
+};
+
+export const VerifyingUpdate = ({build, version}: AboutView) => html`
+  <about-view
+    ${ref(showUpdateVerification)}
     build=${build}
     version=${version}
     .localize=${localize}

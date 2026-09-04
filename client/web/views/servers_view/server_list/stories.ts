@@ -18,6 +18,7 @@
 import './index';
 
 import {html} from 'lit';
+import {ref} from 'lit/directives/ref.js';
 
 import {ServerList} from './index';
 import {localize} from '../../../testing/localize';
@@ -54,4 +55,41 @@ export default {
 
 export const Example = ({servers}: ServerList) => html`
   <server-list .localize="${localize}" .servers="${servers}"></server-list>
+`;
+
+const showDownloadProgress = (element?: Element) => {
+  if (!element) return;
+  const serverList = element as unknown as {
+    appUpdateState: string;
+    appUpdateRelease: {versionName: string; releaseNotes: string};
+    appUpdateProgress: number;
+  };
+  serverList.appUpdateState = 'downloading';
+  serverList.appUpdateRelease = {
+    versionName: '1.1.3',
+    releaseNotes: 'Добавлен прогресс загрузки обновления.',
+  };
+  serverList.appUpdateProgress = 43;
+};
+
+export const DownloadingUpdate = ({servers}: ServerList) => html`
+  <server-list
+    ${ref(showDownloadProgress)}
+    .localize="${localize}"
+    .servers="${servers}"
+  ></server-list>
+`;
+
+const showUpdateVerification = (element?: Element) => {
+  showDownloadProgress(element);
+  if (!element) return;
+  (element as unknown as {appUpdateProgress: number}).appUpdateProgress = 100;
+};
+
+export const VerifyingUpdate = ({servers}: ServerList) => html`
+  <server-list
+    ${ref(showUpdateVerification)}
+    .localize="${localize}"
+    .servers="${servers}"
+  ></server-list>
 `;
