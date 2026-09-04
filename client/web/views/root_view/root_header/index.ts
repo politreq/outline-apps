@@ -25,16 +25,17 @@ export class RootHeader extends LitElement {
     header {
       align-items: center;
       justify-content: space-between;
-      background-color: var(--outline-dark-primary);
+      background-color: #fff7e8;
       display: flex;
       box-sizing: border-box;
       min-height: calc(64px + var(--outline-safe-area-top));
-      padding: var(--outline-safe-area-top) 16px 0 16px;
+      padding: var(--outline-safe-area-top) 12px 0 12px;
+      border-bottom: 1px solid #efd6b4;
     }
 
     h1 {
-      color: var(--outline-white);
-      font-family: 'Jigsaw Sans', 'Roboto', sans-serif;
+      color: #4a2c1d;
+      font-family: 'Roboto', sans-serif;
       font-size: 24px;
       font-weight: 500;
       margin: 0;
@@ -42,7 +43,33 @@ export class RootHeader extends LitElement {
     }
 
     md-icon {
-      color: var(--outline-white);
+      color: #4a2c1d;
+    }
+
+    md-icon-button {
+      background: #ffe8c7;
+      border: 1px solid #f2cca0;
+      border-radius: 16px;
+    }
+
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .title-mark {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      background: #c85f3f;
+      border-radius: 12px;
+    }
+
+    .title-mark md-icon {
+      color: #fff9eb;
+      font-size: 22px;
     }
 
     .hidden {
@@ -59,7 +86,10 @@ export class RootHeader extends LitElement {
         : html`<md-icon-button @click=${this.openNavigation}>
             <md-icon>menu</md-icon>
           </md-icon-button>`}
-      <h1>${this.title || 'Outline'}</h1>
+      <div class="title">
+        <span class="title-mark"><md-icon>home</md-icon></span>
+        <h1>${this.title || 'В домике'}</h1>
+      </div>
       <md-icon-button
         class=${classMap({hidden: !this.showAddButton})}
         @click=${this.openAddAccessKey}

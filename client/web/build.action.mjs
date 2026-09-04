@@ -29,7 +29,8 @@ import {runWebpack} from '../build/run_webpack.mjs';
  * @param {string[]} parameters
  */
 export async function main(...parameters) {
-  const {sentryDsn, platform, buildMode, versionName, buildNumber} = getBuildParameters(parameters);
+  const {sentryDsn, platform, buildMode, versionName, buildNumber} =
+    getBuildParameters(parameters);
 
   await rmfr(path.resolve(getRootDir(), 'www'));
 
@@ -38,25 +39,27 @@ export async function main(...parameters) {
 
   if (buildMode === 'release') {
     if (versionName === '0.0.0') {
-      throw new TypeError('Release builds require a valid versionName, but it is set to 0.0.0.');
-    }
-
-    if (!sentryDsn) {
-      throw new TypeError('Release builds require SENTRY_DSN, but it is not defined.');
+      throw new TypeError(
+        'Release builds require a valid versionName, but it is set to 0.0.0.'
+      );
     }
 
     /*
       the SENTRY_DSN follows a stardard URL format:
       https://docs.sentry.io/product/sentry-basics/dsn-explainer/#the-parts-of-the-dsn
     */
-    try {
-      new URL(sentryDsn);
-    } catch (e) {
-      throw new TypeError(`The sentryDsn ${sentryDsn} is not a valid URL!`);
+    if (sentryDsn) {
+      try {
+        new URL(sentryDsn);
+      } catch {
+        throw new TypeError(`The sentryDsn ${sentryDsn} is not a valid URL!`);
+      }
     }
   }
 
-  await fs.mkdir(path.resolve(getRootDir(), 'client', 'www'), {recursive: true});
+  await fs.mkdir(path.resolve(getRootDir(), 'client', 'www'), {
+    recursive: true,
+  });
 
   await fs.writeFile(
     path.resolve(getRootDir(), 'client', 'www', 'environment.json'),

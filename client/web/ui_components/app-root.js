@@ -372,6 +372,7 @@ export class AppRoot extends mixinBehaviors(
         show-quit="[[shouldShowQuitButton]]"
         data-collection-page-url="https://getoutline.org/policies/data-collection"
         show-appearance-view="[[showAppearanceView]]"
+        show-app-routing-settings="[[showAppRoutingSettings]]"
       ></root-navigation>
 
       <add-access-key-dialog
@@ -591,6 +592,10 @@ export class AppRoot extends mixinBehaviors(
         computed: '_computeUseAltAccessMessage(language)',
       },
       showAppearanceView: {
+        type: Boolean,
+        value: false,
+      },
+      showAppRoutingSettings: {
         type: Boolean,
         value: false,
       },

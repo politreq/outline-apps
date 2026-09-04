@@ -16,8 +16,6 @@ import {LitElement, html, css, nothing} from 'lit';
 import {customElement, property} from 'lit/decorators.js';
 import {classMap} from 'lit/directives/class-map.js';
 
-import navigationLogo from '../../../assets/logo-nav.png';
-
 @customElement('root-navigation')
 export class RootNavigation extends LitElement {
   @property({type: Object}) localize: Localizer = msg => msg;
@@ -27,6 +25,7 @@ export class RootNavigation extends LitElement {
   @property({type: String}) align: 'left' | 'right';
   @property({type: String}) dataCollectionPageUrl: string;
   @property({type: Boolean}) showAppearanceView: boolean = false;
+  @property({type: Boolean}) showAppRoutingSettings: boolean = false;
 
   static styles = css`
     :host {
@@ -97,7 +96,7 @@ export class RootNavigation extends LitElement {
     }
 
     header {
-      background-color: var(--outline-dark-primary);
+      background-color: #fff7e8;
       position: sticky;
       top: 0;
       display: flex;
@@ -107,8 +106,27 @@ export class RootNavigation extends LitElement {
       z-index: 1;
     }
 
-    header img {
-      width: 76px;
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #4a2c1d;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .nav-brand-mark {
+      display: grid;
+      width: 52px;
+      height: 52px;
+      place-items: center;
+      background: #c85f3f;
+      border-radius: 18px;
+    }
+
+    .nav-brand-mark md-icon {
+      color: #fff9eb;
+      font-size: 32px;
     }
 
     md-list-item {
@@ -202,7 +220,10 @@ export class RootNavigation extends LitElement {
         })}
       >
         <header>
-          <img src="${navigationLogo}" alt="Outline navigation logo" />
+          <div class="nav-brand" aria-label="В домике">
+            <span class="nav-brand-mark"><md-icon>home</md-icon></span>
+            <span>В домике</span>
+          </div>
         </header>
         <md-list>
           <!-- 
@@ -217,23 +238,10 @@ export class RootNavigation extends LitElement {
             <md-icon slot="start">home</md-icon>
             ${this.localize('servers-menu-item')}
           </md-list-item>
-          <md-list-item @click=${() => this.changePage('contact')}>
-            <md-ripple></md-ripple>
-            <md-icon slot="start">feedback</md-icon>
-            ${this.localize('contact-page-title')}
-          </md-list-item>
           <md-list-item @click=${() => this.changePage('about')}>
             <md-ripple></md-ripple>
             <md-icon slot="start">info</md-icon>
             ${this.localize('about-page-title')}
-          </md-list-item>
-          <md-list-item>
-            <md-ripple></md-ripple>
-            <md-icon slot="start">help</md-icon>
-            <a href="https://support.getoutline.org">
-              <span>${this.localize('help-page-title')}</span>
-              <md-icon id="open-in-new-icon">open_in_new</md-icon>
-            </a>
           </md-list-item>
           <md-list-item @click=${() => this.changePage('language')}>
             <md-ripple></md-ripple>
@@ -249,6 +257,15 @@ export class RootNavigation extends LitElement {
                 </md-list-item>
               `
             : nothing}
+          ${this.showAppRoutingSettings
+            ? html`
+                <md-list-item @click=${this.openAppRoutingSettings}>
+                  <md-ripple></md-ripple>
+                  <md-icon slot="start">apps</md-icon>
+                  ${this.localize('app-routing-menu-item')}
+                </md-list-item>
+              `
+            : nothing}
           ${this.showQuit
             ? html`<md-list-item @click=${this.quit}>
                 <md-ripple></md-ripple>
@@ -258,24 +275,6 @@ export class RootNavigation extends LitElement {
             : nothing}
         </md-list>
         <ul>
-          <li>
-            <a href="https://getoutline.org/policies/privacy">
-              ${this.localize('privacy')}
-              <md-icon id="open-in-new-icon">open_in_new</md-icon>
-            </a>
-          </li>
-          <li>
-            <a href="${this.dataCollectionPageUrl}">
-              ${this.localize('data-collection')}
-              <md-icon id="open-in-new-icon">open_in_new</md-icon>
-            </a>
-          </li>
-          <li>
-            <a href="https://getoutline.org/policies/terms-of-service">
-              ${this.localize('terms')}
-              <md-icon id="open-in-new-icon">open_in_new</md-icon>
-            </a>
-          </li>
           <li @click=${() => this.changePage('licenses')}>
             ${this.localize('licenses-page-title')}
           </li>
@@ -306,6 +305,15 @@ export class RootNavigation extends LitElement {
   private quit() {
     this.dispatchEvent(
       new CustomEvent('QuitPressed', {
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  private openAppRoutingSettings() {
+    this.dispatchEvent(
+      new CustomEvent('OpenAppRoutingSettings', {
         bubbles: true,
         composed: true,
       })

@@ -38,10 +38,14 @@ import androidx.annotation.Nullable;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.outline.IVpnTunnelService;
@@ -69,6 +73,7 @@ public class VpnTunnelService extends VpnService {
   private static final String TUNNEL_ID_KEY = "id";
   private static final String TUNNEL_CONFIG_KEY = "config";
   private static final String TUNNEL_SERVER_NAME = "serverName";
+  private static final String TUNNEL_DISALLOWED_APPLICATIONS = "disallowedApplications";
 
   public static final String STATUS_BROADCAST_KEY = "onStatusChange";
   public static final String START_LAST_TUNNEL_EXTRA = "startLastTunnel";
@@ -262,8 +267,21 @@ public class VpnTunnelService extends VpnService {
                         // TODO(fortuna): dynamically select it.
                         .addAddress("10.111.222.1", 24)
                         .addDnsServer(dnsResolver)
-                        .setBlocking(true)
-                        .addDisallowedApplication(this.getPackageName());
+                        .setBlocking(true);
+
+        Set<String> disallowedApplications = new HashSet<>();
+        disallowedApplications.add(this.getPackageName());
+        if (config.disallowedApplications != null) {
+          Collections.addAll(disallowedApplications, config.disallowedApplications);
+        }
+        for (String packageName : disallowedApplications) {
+          try {
+            builder.addDisallowedApplication(packageName);
+          } catch (PackageManager.NameNotFoundException e) {
+            // Keep stale selections so reinstalling the app restores the user's choice.
+            LOG.fine(String.format(Locale.ROOT, "Bypassed app is not installed: %s", packageName));
+          }
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
           builder.setMetered(false);
@@ -489,6 +507,13 @@ public class VpnTunnelService extends VpnService {
       tunnelConfig.id = tunnel.getString(TUNNEL_ID_KEY);
       tunnelConfig.name = tunnel.getString(TUNNEL_SERVER_NAME);
       tunnelConfig.transportConfig = tunnel.getString(TUNNEL_CONFIG_KEY);
+      JSONArray disallowedApplications = tunnel.optJSONArray(TUNNEL_DISALLOWED_APPLICATIONS);
+      if (disallowedApplications != null) {
+        tunnelConfig.disallowedApplications = new String[disallowedApplications.length()];
+        for (int i = 0; i < disallowedApplications.length(); i++) {
+          tunnelConfig.disallowedApplications[i] = disallowedApplications.getString(i);
+        }
+      }
 
       // Start the service in the foreground as per Android 8+ background service execution limits.
       // Requires android.permission.FOREGROUND_SERVICE since Android P.
@@ -505,8 +530,15 @@ public class VpnTunnelService extends VpnService {
     LOG.info("Storing active tunnel.");
     JSONObject tunnel = new JSONObject();
     try {
+      JSONArray disallowedApplications = new JSONArray();
+      if (config.disallowedApplications != null) {
+        for (String packageName : config.disallowedApplications) {
+          disallowedApplications.put(packageName);
+        }
+      }
       tunnel.put(TUNNEL_ID_KEY, config.id).put(
-        TUNNEL_CONFIG_KEY, config.transportConfig).put(TUNNEL_SERVER_NAME, config.name);
+        TUNNEL_CONFIG_KEY, config.transportConfig).put(TUNNEL_SERVER_NAME, config.name).put(
+        TUNNEL_DISALLOWED_APPLICATIONS, disallowedApplications);
       tunnelStore.save(tunnel);
     } catch (JSONException e) {
       LOG.log(Level.SEVERE, "Failed to store JSON tunnel data", e);
@@ -573,7 +605,7 @@ public class VpnTunnelService extends VpnService {
     Notification.Builder builder;
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       NotificationChannel channel = new NotificationChannel(
-          NOTIFICATION_CHANNEL_ID, "Outline", NotificationManager.IMPORTANCE_LOW);
+          NOTIFICATION_CHANNEL_ID, "В домике", NotificationManager.IMPORTANCE_LOW);
       NotificationManager notificationManager = getSystemService(NotificationManager.class);
       notificationManager.createNotificationChannel(channel);
       builder = new Notification.Builder(this, NOTIFICATION_CHANNEL_ID);

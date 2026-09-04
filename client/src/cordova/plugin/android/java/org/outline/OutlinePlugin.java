@@ -26,6 +26,7 @@ import android.net.VpnService;
 import android.os.IBinder;
 import android.os.RemoteException;
 import androidx.annotation.Nullable;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -39,6 +40,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.outline.log.OutlineLogger;
 import org.outline.log.SentryErrorReporter;
+import org.outline.vpn.AppRoutingActivity;
+import org.outline.vpn.AppRoutingPreferences;
 import org.outline.vpn.Errors;
 import org.outline.vpn.VpnServiceStarter;
 import org.outline.vpn.VpnTunnelService;
@@ -64,6 +67,7 @@ public class OutlinePlugin extends CordovaPlugin {
     IS_RUNNING("isRunning"),
     INIT_ERROR_REPORTING("initializeErrorReporting"),
     REPORT_EVENTS("reportEvents"),
+    OPEN_APP_ROUTING_SETTINGS("openAppRoutingSettings"),
     QUIT("quitApplication");
 
     private final static Map<String, Action> actions = new HashMap<>();
@@ -164,6 +168,12 @@ public class OutlinePlugin extends CordovaPlugin {
     }
     if (Action.QUIT.is(action)) {
       this.cordova.getActivity().finish();
+      return true;
+    }
+    if (Action.OPEN_APP_ROUTING_SETTINGS.is(action)) {
+      Intent intent = new Intent(this.cordova.getActivity(), AppRoutingActivity.class);
+      this.cordova.getActivity().startActivity(intent);
+      callbackContext.success();
       return true;
     }
 
@@ -285,6 +295,10 @@ public class OutlinePlugin extends CordovaPlugin {
     tunnelConfig.id = tunnelId;
     tunnelConfig.name = serverName;
     tunnelConfig.transportConfig = transportConfig;
+    AppRoutingPreferences.initializeDefaultsIfNeeded(getBaseContext());
+    tunnelConfig.disallowedApplications =
+        AppRoutingPreferences.getBypassedPackages(getBaseContext()).toArray(new String[0]);
+    Arrays.sort(tunnelConfig.disallowedApplications);
     return vpnTunnelService.startTunnel(tunnelConfig);
   }
 

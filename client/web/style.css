@@ -31,15 +31,15 @@ body {
   --outline-safe-area-top: 0px;
   --min-supported-device-width: 320px;
 
-  --outline-primary: hsl(170, 60%, 46%);
-  --outline-primary-dark: hsl(176, 97%, 26%);
-  --outline-primary-rgb: 47, 186, 156;
+  --outline-primary: #769b37;
+  --outline-primary-dark: #537629;
+  --outline-primary-rgb: 118, 155, 55;
 
-  --outline-primary-medium: hsl(172, 60%, 72%);
-  --outline-primary-light: hsl(174, 58%, 91%);
+  --outline-primary-medium: #b8cb86;
+  --outline-primary-light: #edf4d8;
 
   /* RGB values for primary color */
-  --outline-dark-primary: hsl(200, 19%, 18%);
+  --outline-dark-primary: #4a2c1d;
   --outline-error: hsl(4, 90%, 58%);
   --outline-warning: hsl(52, 100%, 49%);
 
@@ -131,12 +131,12 @@ body {
 
   /* default light theme */
   --outline-splash-title-color: var(--outline-primary-dark);
-  --outline-background: var(--outline-white);
-  --outline-card-background: var(--outline-white);
-  --outline-card-footer: var(--outline-light-gray);
-  --outline-text-color: var(--outline-black);
-  --outline-label-color: var(--outline-medium-gray);
-  --outline-hairline: 1px solid hsl(0, 0%, 85%);
+  --outline-background: #fff7e8;
+  --outline-card-background: #fffaf0;
+  --outline-card-footer: #f8ead5;
+  --outline-text-color: #4a2c1d;
+  --outline-label-color: #8f7465;
+  --outline-hairline: 1px solid #efd6b4;
   --outline-elevation: rgb(0 0 0 / 30%) 0px 2px 3px 2px;
   --outline-app-dialog-primary-background-color: var(--outline-white);
 

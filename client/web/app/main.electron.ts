@@ -160,5 +160,6 @@ main({
   getErrorReporter: _ => new ElectronErrorReporter(),
   getUpdater: () => new ElectronUpdater(),
   getVpnServiceInstaller: () => new ElectronVpnInstaller(),
+  getAppRoutingSettingsOpener: () => undefined,
   quitApplication: () => window.electron.methodChannel.send('quit-app'),
 }).catch(console.error);

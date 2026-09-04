@@ -14,9 +14,6 @@
 import {LitElement, html, css} from 'lit';
 import {customElement, property} from 'lit/decorators.js';
 
-import outlineDarkLogo from '../../assets/brand-logo-dark.png';
-import outlineLogo from '../../assets/brand-logo.png';
-
 @customElement('about-view')
 export class AboutView extends LitElement {
   @property({type: Boolean}) darkMode = false;
@@ -55,8 +52,31 @@ export class AboutView extends LitElement {
       padding: calc(32px + var(--outline-safe-area-top)) 24px 0 24px;
     }
 
-    header img {
+    .about-brand {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: #4a2c1d;
+    }
+
+    .about-brand span {
+      display: grid;
       width: 76px;
+      height: 76px;
+      place-items: center;
+      background: #c85f3f;
+      border-radius: 26px;
+    }
+
+    .about-brand md-icon {
+      color: #fff9eb;
+      font-size: 48px;
+    }
+
+    .about-brand h1 {
+      margin: 0;
+      font-size: 24px;
     }
 
     header h2 {
@@ -92,10 +112,10 @@ export class AboutView extends LitElement {
     return html`
       <article>
         <header>
-          <img
-            src="${this.darkMode ? outlineDarkLogo : outlineLogo}"
-            alt="outline logo"
-          />
+          <div class="about-brand">
+            <span><md-icon>home</md-icon></span>
+            <h1>В домике</h1>
+          </div>
           <h2>
             ${this.localize('version', 'appVersion', this.version)}
             (${this.build})
@@ -105,14 +125,8 @@ export class AboutView extends LitElement {
           id="about-outline-content"
           .innerHTML=${this.localize(
             'about-outline',
-            'outlineUrl',
-            'https://getoutline.org',
             'shadowsocksUrl',
-            'https://shadowsocks.org',
-            'gitHubUrl',
-            'https://github.com/OutlineFoundation',
-            'redditUrl',
-            'https://www.reddit.com/r/outlinevpn'
+            'https://shadowsocks.org'
           )}
         ></section>
       </article>
