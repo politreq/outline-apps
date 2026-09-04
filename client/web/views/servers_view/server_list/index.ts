@@ -12,6 +12,8 @@
 */
 
 import {Localizer} from '@outline/infrastructure/i18n';
+import '@polymer/iron-icon/iron-icon.js';
+import '@polymer/iron-icons/iron-icons.js';
 import {css, html, LitElement} from 'lit';
 import {customElement, property, state} from 'lit/decorators.js';
 
@@ -302,7 +304,9 @@ export class ServerList extends LitElement {
     }
     .power-icon {
       color: #fffdf0;
-      font-size: 46px;
+      width: 54px;
+      height: 54px;
+      pointer-events: none;
     }
     .door-label {
       padding: 3px 7px;
@@ -565,7 +569,7 @@ export class ServerList extends LitElement {
           @click=${this.toggleConnection}
         >
           <span class="door-button-content">
-            <md-icon class="power-icon">power_settings_new</md-icon>
+            <iron-icon class="power-icon" icon="power-settings-new"></iron-icon>
             <span class="door-label"
               >${connected ? 'Выключить' : 'Включить'}</span
             >
