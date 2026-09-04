@@ -134,6 +134,7 @@ export function main(platform: OutlinePlatform) {
         environmentVars,
         platform.getUpdater(),
         platform.getVpnServiceInstaller(),
+        platform.getAppRoutingSettingsOpener(),
         platform.quitApplication
       );
     },

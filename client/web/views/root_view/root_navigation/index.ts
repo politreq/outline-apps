@@ -27,6 +27,7 @@ export class RootNavigation extends LitElement {
   @property({type: String}) align: 'left' | 'right';
   @property({type: String}) dataCollectionPageUrl: string;
   @property({type: Boolean}) showAppearanceView: boolean = false;
+  @property({type: Boolean}) showAppRoutingSettings: boolean = false;
 
   static styles = css`
     :host {
@@ -249,6 +250,15 @@ export class RootNavigation extends LitElement {
                 </md-list-item>
               `
             : nothing}
+          ${this.showAppRoutingSettings
+            ? html`
+                <md-list-item @click=${this.openAppRoutingSettings}>
+                  <md-ripple></md-ripple>
+                  <md-icon slot="start">apps</md-icon>
+                  ${this.localize('app-routing-menu-item')}
+                </md-list-item>
+              `
+            : nothing}
           ${this.showQuit
             ? html`<md-list-item @click=${this.quit}>
                 <md-ripple></md-ripple>
@@ -306,6 +316,15 @@ export class RootNavigation extends LitElement {
   private quit() {
     this.dispatchEvent(
       new CustomEvent('QuitPressed', {
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  private openAppRoutingSettings() {
+    this.dispatchEvent(
+      new CustomEvent('OpenAppRoutingSettings', {
         bubbles: true,
         composed: true,
       })

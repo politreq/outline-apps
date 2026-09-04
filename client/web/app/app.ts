@@ -104,6 +104,7 @@ export class App {
     environmentVars: EnvironmentVariables,
     private updater: Updater,
     private installer: VpnInstaller,
+    private appRoutingSettingsOpener: (() => void) | undefined,
     private quitApplication: () => void,
     document = window.document
   ) {
@@ -113,6 +114,7 @@ export class App {
     rootEl.appVersion = environmentVars.APP_VERSION;
     rootEl.appBuild = environmentVars.APP_BUILD_NUMBER;
     rootEl.errorReporter = this.errorReporter;
+    rootEl.showAppRoutingSettings = Boolean(this.appRoutingSettingsOpener);
 
     if (urlInterceptor) {
       this.registerUrlInterceptionListener(urlInterceptor);
@@ -177,6 +179,12 @@ export class App {
       'QuitPressed',
       this.quitApplication.bind(this)
     );
+    if (this.appRoutingSettingsOpener) {
+      this.rootEl.addEventListener(
+        'OpenAppRoutingSettings',
+        this.openAppRoutingSettings.bind(this)
+      );
+    }
     this.rootEl.addEventListener(
       'AutoConnectDialogDismissed',
       this.autoConnectDialogDismissed.bind(this)
@@ -420,6 +428,11 @@ export class App {
 
   private hideNavigation() {
     this.rootEl.$.drawer.open = false;
+  }
+
+  private openAppRoutingSettings() {
+    this.hideNavigation();
+    this.appRoutingSettingsOpener?.();
   }
 
   private changePage(event: CustomEvent) {

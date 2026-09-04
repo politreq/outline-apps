@@ -18,4 +18,12 @@
 <resources>
   <string name="connected_server_state">Подключен</string>
   <string name="reconnecting_server_state">Повторное подключение…</string>
+  <string name="app_routing_title">Режим VPN для приложений</string>
+  <string name="app_routing_description">Отмеченные приложения подключаются напрямую, без VPN.</string>
+  <string name="app_routing_selected_count">Без VPN: %1$d из %2$d</string>
+  <string name="app_routing_search_hint">Поиск приложений</string>
+  <string name="app_routing_reconnect_note">Изменения применятся при следующем подключении к VPN.</string>
+  <string name="app_routing_back">Назад</string>
+  <string name="app_routing_bypassed">без VPN</string>
+  <string name="app_routing_via_vpn">через VPN</string>
 </resources>

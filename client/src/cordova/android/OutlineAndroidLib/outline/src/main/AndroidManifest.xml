@@ -18,9 +18,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Required to present the complete installed-app list for per-app VPN routing. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <application>
         <!-- This is needed for the instrumentation tests to run. -->
         <meta-data android:name="io.sentry.auto-init" android:value="false" />
+        <activity
+            android:name="org.outline.vpn.AppRoutingActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
     </application>
 </manifest>
-

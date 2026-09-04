@@ -10,6 +10,7 @@
   "appearance-light": "Light",
   "appearance-page-title": "Appearance",
   "appearance-system": "System",
+  "app-routing-menu-item": "VPN for apps",
   "auto-connect-dialog-detail": "Unless you disconnect from your Outline server, Outline will automatically connect next time you restart your device.",
   "auto-connect-dialog-title": "Stay protected, always",
   "basic-access-configure-dns": "Configure",

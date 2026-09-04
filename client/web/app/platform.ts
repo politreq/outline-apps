@@ -35,5 +35,7 @@ export interface OutlinePlatform {
 
   getVpnServiceInstaller(): VpnInstaller;
 
+  getAppRoutingSettingsOpener(): (() => void) | undefined;
+
   quitApplication(): void;
 }
