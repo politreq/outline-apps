@@ -17,6 +17,7 @@ import {customElement, property, state} from 'lit/decorators.js';
 import {
   AndroidAppUpdater,
   AppRelease,
+  appUpdateErrorMessage,
   isAndroidAppUpdateSupported,
 } from '../../app/app_update';
 
@@ -44,6 +45,7 @@ export class AboutView extends LitElement {
   @state() private updateRelease?: AppRelease;
   @state() private downloadedUpdatePath = '';
   @state() private downloadProgress = 0;
+  @state() private updateError = appUpdateErrorMessage('check');
 
   private readonly appUpdater = new AndroidAppUpdater();
 
@@ -290,6 +292,7 @@ export class AboutView extends LitElement {
       this.updateStatus = result.available ? 'available' : 'current';
     } catch (error) {
       console.error('Manual app update check failed', error);
+      this.updateError = appUpdateErrorMessage('check');
       this.updateStatus = 'error';
     }
   }
@@ -306,6 +309,7 @@ export class AboutView extends LitElement {
       await this.installUpdate();
     } catch (error) {
       console.error('Manual app update download failed', error);
+      this.updateError = appUpdateErrorMessage('download');
       this.updateStatus = 'error';
     }
   }
@@ -321,6 +325,7 @@ export class AboutView extends LitElement {
         result.status === 'permission_required' ? 'permission' : 'installing';
     } catch (error) {
       console.error('Manual app update installer failed', error);
+      this.updateError = appUpdateErrorMessage('install');
       this.updateStatus = 'error';
     }
   }
@@ -368,7 +373,7 @@ export class AboutView extends LitElement {
           text: 'Подтвердите обновление в системном окне Android',
         };
       default:
-        return {icon: 'error', text: 'Не удалось проверить обновления'};
+        return {icon: 'error', text: this.updateError};
     }
   }
 

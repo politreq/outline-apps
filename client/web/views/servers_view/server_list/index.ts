@@ -20,6 +20,7 @@ import {customElement, property, state} from 'lit/decorators.js';
 import {
   AndroidAppUpdater,
   AppRelease,
+  appUpdateErrorMessage,
   isAndroidAppUpdateSupported,
 } from '../../../app/app_update';
 import dayOn from '../../../assets/home/day-on.webp';
@@ -105,6 +106,7 @@ export class ServerList extends LitElement {
   @state() private appUpdateRelease?: AppRelease;
   @state() private downloadedUpdatePath = '';
   @state() private appUpdateProgress = 0;
+  @state() private appUpdateError = appUpdateErrorMessage('download');
 
   private clockTimer?: number;
   private updateCheckTimer?: number;
@@ -566,6 +568,7 @@ export class ServerList extends LitElement {
       await this.installAppUpdate();
     } catch (error) {
       console.error('App update download failed', error);
+      this.appUpdateError = appUpdateErrorMessage('download');
       this.appUpdateState = 'error';
     }
   }
@@ -581,6 +584,7 @@ export class ServerList extends LitElement {
         result.status === 'permission_required' ? 'permission' : 'installing';
     } catch (error) {
       console.error('App update installer failed', error);
+      this.appUpdateError = appUpdateErrorMessage('install');
       this.appUpdateState = 'error';
     }
   }
@@ -607,9 +611,9 @@ export class ServerList extends LitElement {
         : this.appUpdateState === 'permission'
           ? 'Включите разрешение для «В домике», затем нажмите «Продолжить».'
           : this.appUpdateState === 'installing'
-            ? 'Открылось системное окно Android.'
+            ? 'Подтвердите обновление в системном окне Android. Если окно закрыто, нажмите «Открыть».'
             : this.appUpdateState === 'error'
-              ? 'Проверьте интернет и попробуйте ещё раз.'
+              ? this.appUpdateError
               : this.appUpdateProgress < 100
                 ? `Загружено ${this.appUpdateProgress}% файла.`
                 : 'Загрузка завершена. Проверяем файл и подпись.';

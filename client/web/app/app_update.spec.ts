@@ -2,12 +2,19 @@
 // Licensed under the Apache License, Version 2.0.
 
 import {
+  appUpdateErrorMessage,
   isAndroidAppUpdateSupported,
   isAppUpdateDownloadProgress,
   isUpdateAvailable,
 } from './app_update';
 
 describe('Android app update policy', () => {
+  it('does not report installer failures as network/check failures', () => {
+    expect(appUpdateErrorMessage('install')).toContain('установщик');
+    expect(appUpdateErrorMessage('install')).not.toContain('интернет');
+    expect(appUpdateErrorMessage('download')).toContain('загрузку');
+    expect(appUpdateErrorMessage('check')).toContain('проверить обновления');
+  });
   it('offers only a strictly newer versionCode', () => {
     expect(isUpdateAvailable(10001, 10100)).toBe(true);
     expect(isUpdateAvailable(10100, 10100)).toBe(false);
