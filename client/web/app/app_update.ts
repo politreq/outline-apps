@@ -43,7 +43,22 @@ export interface AppUpdateDownloadProgress {
   percent: number;
 }
 
-export type AppUpdateInstallStatus = 'permission_required' | 'installer_opened';
+export type AppUpdateInstallStatus =
+  | 'permission_required'
+  | 'installer_requested';
+
+export type AppUpdateStage = 'check' | 'download' | 'install';
+
+export function appUpdateErrorMessage(stage: AppUpdateStage): string {
+  switch (stage) {
+    case 'install':
+      return 'Не удалось открыть установщик. Повторите попытку или установите APK из загрузок браузера.';
+    case 'download':
+      return 'Не удалось скачать или проверить обновление. Повторите загрузку.';
+    default:
+      return 'Не удалось проверить обновления. Проверьте подключение к интернету.';
+  }
+}
 
 interface CordovaHost {
   cordova?: {platformId?: string};

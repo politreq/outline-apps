@@ -13,6 +13,7 @@
 
 package org.outline;
 
+import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
@@ -20,6 +21,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.net.Uri;
 import android.os.Build;
+import android.os.ParcelFileDescriptor;
 import android.provider.Settings;
 import androidx.core.content.FileProvider;
 import java.io.ByteArrayOutputStream;
@@ -208,14 +210,26 @@ final class AppUpdateManager {
 
       Uri uri = FileProvider.getUriForFile(
           context, context.getPackageName() + ".update.fileprovider", apk);
+      // Verify the actual provider round trip, not just the private file. An
+      // authority/component collision can otherwise close Android's installer
+      // immediately without startActivity throwing an exception in this app.
+      try (ParcelFileDescriptor descriptor =
+          context.getContentResolver().openFileDescriptor(uri, "r")) {
+        if (descriptor == null || descriptor.getStatSize() != apk.length()) {
+          throw new IOException("Update content URI is not readable");
+        }
+      }
       Intent installer = new Intent(Intent.ACTION_VIEW);
       installer.setDataAndType(uri, APK_MIME_TYPE);
+      installer.setClipData(ClipData.newRawUri("App update", uri));
       installer.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
       installer.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
       context.startActivity(installer);
-      response.put("status", "installer_opened");
+      // Successful dispatch is not proof that Android displayed or completed
+      // its installation UI. Keep that distinction in the client-facing status.
+      response.put("status", "installer_requested");
       return response;
-    } catch (JSONException | RuntimeException e) {
+    } catch (IOException | JSONException | RuntimeException e) {
       throw new AppUpdateException("installer", e);
     }
   }

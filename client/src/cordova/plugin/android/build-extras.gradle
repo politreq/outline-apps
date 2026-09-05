@@ -18,6 +18,7 @@ android {
   // localized dependency resource from the release package.
   defaultConfig {
     resourceConfigurations += ["ru"]
+    testInstrumentationRunner "org.outline.AppUpdateInstallerTest"
   }
 
   // Native-library symbol stripping. AGP's mergeNativeLibs step strips the
