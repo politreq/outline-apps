@@ -18,7 +18,7 @@ import {OperationTimedOut} from '@outline/infrastructure/timeout_promise';
 import {Clipboard} from './clipboard';
 import {EnvironmentVariables} from './environment';
 import * as config from './outline_server_repository/config';
-import {Settings, SettingsKey, Appearance} from './settings';
+import {Settings, SettingsKey} from './settings';
 import {Updater} from './updater';
 import {UrlInterceptor} from './url_interceptor';
 import {VpnInstaller} from './vpn_installer';
@@ -86,12 +86,6 @@ export class App {
   private ignoredAccessKeys: {[accessKey: string]: boolean} = {};
   private serverConnectionChangeTimeouts: {[serverId: string]: boolean} = {};
 
-  // Feature flag to control whether dark mode is enabled
-  // When set to true, the theme option will appear in the navigation menu
-  // and the app will respect system theme or user theme selection
-  // TODO: remove once released and no critical issues found
-  private appearanceFeatureEnabled = true;
-
   constructor(
     private eventQueue: events.EventQueue,
     private serverRepo: ServerRepository,
@@ -115,6 +109,8 @@ export class App {
     rootEl.appBuild = environmentVars.APP_BUILD_NUMBER;
     rootEl.errorReporter = this.errorReporter;
     rootEl.showAppRoutingSettings = Boolean(this.appRoutingSettingsOpener);
+    rootEl.darkMode = false;
+    document.documentElement.classList.remove('dark');
 
     if (urlInterceptor) {
       this.registerUrlInterceptionListener(urlInterceptor);
@@ -193,25 +189,6 @@ export class App {
       'PrivacyTermsAcked',
       this.ackPrivacyTerms.bind(this)
     );
-    this.rootEl.addEventListener(
-      'SetLanguageRequested',
-      this.setAppLanguage.bind(this)
-    );
-
-    if (this.appearanceFeatureEnabled) {
-      this.rootEl.showAppearanceView = true;
-      this.setAppearance(
-        this.settings.get(SettingsKey.APPEARANCE) as Appearance
-      );
-      this.rootEl.addEventListener(
-        'SetAppearanceRequested',
-        (event: CustomEvent) => {
-          this.settings.set(SettingsKey.APPEARANCE, event.detail.appearance);
-          this.setAppearance(event.detail.appearance);
-        }
-      );
-    }
-
     // Register handlers for events published to our event queue.
     this.eventQueue.subscribe(
       events.ServerAdded,
@@ -409,13 +386,6 @@ export class App {
     this.rootEl.$.privacyView.open = false;
     this.rootEl.$.addServerView.open = true;
     this.settings.set(SettingsKey.PRIVACY_ACK, 'true');
-  }
-
-  private setAppLanguage(event: CustomEvent) {
-    const languageCode = event.detail.languageCode;
-    window.localStorage.setItem('overrideLanguage', languageCode);
-    this.rootEl.setLanguage(languageCode);
-    this.changeToDefaultPage();
   }
 
   private showAddServerDialog() {
@@ -890,32 +860,5 @@ export class App {
 
   private isWindows() {
     return !('cordova' in window);
-  }
-
-  private setAppearance(appearance: Appearance) {
-    const documentClassList = window.document.documentElement.classList;
-    const isSystemDark = matchMedia('(prefers-color-scheme: dark)').matches;
-
-    let applyDarkTheme;
-
-    if (appearance === Appearance.DARK) {
-      applyDarkTheme = true;
-    } else if (appearance === Appearance.LIGHT) {
-      applyDarkTheme = false;
-    } else {
-      // guard against potentially corrupt value
-      appearance = Appearance.SYSTEM;
-      applyDarkTheme = isSystemDark;
-    }
-
-    if (applyDarkTheme) {
-      this.rootEl.darkMode = true;
-      documentClassList.add('dark');
-    } else {
-      this.rootEl.darkMode = false;
-      documentClassList.remove('dark');
-    }
-
-    this.rootEl.selectedAppearance = appearance;
   }
 }

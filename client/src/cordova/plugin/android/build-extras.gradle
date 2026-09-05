@@ -13,6 +13,13 @@
 // limitations under the License.
 
 android {
+  // This fork has a Russian-only interface. Keep the default resource set for
+  // Android compatibility, plus Russian translations, and discard every other
+  // localized dependency resource from the release package.
+  defaultConfig {
+    resourceConfigurations += ["ru"]
+  }
+
   // Native-library symbol stripping. AGP's mergeNativeLibs step strips the
   // debug symbols out of the .so files it packages (tun2socks' libgojni.so, the
   // Sentry native libs) -- but only when it can find a compatible NDK's

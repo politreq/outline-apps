@@ -57,6 +57,65 @@ export const Example = ({servers}: ServerList) => html`
   <server-list .localize="${localize}" .servers="${servers}"></server-list>
 `;
 
+type StoryPeriod = 'morning' | 'day' | 'evening' | 'night';
+
+const setStoryPeriod = (period: StoryPeriod) => (element?: Element) => {
+  if (!element) return;
+  const serverList = element as unknown as {
+    period: StoryPeriod;
+    moscowTime: string;
+  };
+  window.requestAnimationFrame(() => {
+    serverList.period = period;
+    serverList.moscowTime =
+      period === 'morning'
+        ? '08:15'
+        : period === 'day'
+          ? '14:30'
+          : period === 'evening'
+            ? '20:10'
+            : '01:20';
+  });
+};
+
+const sceneServers = (servers: ServerList['servers'], connected: boolean) =>
+  servers.map((server, index) => ({
+    ...server,
+    connectionState:
+      connected && index === 0
+        ? ServerConnectionState.CONNECTED
+        : ServerConnectionState.DISCONNECTED,
+  }));
+
+const sceneStory = (
+  servers: ServerList['servers'],
+  period: StoryPeriod,
+  connected: boolean
+) => html`
+  <server-list
+    ${ref(setStoryPeriod(period))}
+    .localize="${localize}"
+    .servers="${sceneServers(servers, connected)}"
+  ></server-list>
+`;
+
+export const MorningOff = ({servers}: ServerList) =>
+  sceneStory(servers, 'morning', false);
+export const MorningOn = ({servers}: ServerList) =>
+  sceneStory(servers, 'morning', true);
+export const DayOff = ({servers}: ServerList) =>
+  sceneStory(servers, 'day', false);
+export const DayOn = ({servers}: ServerList) =>
+  sceneStory(servers, 'day', true);
+export const EveningOff = ({servers}: ServerList) =>
+  sceneStory(servers, 'evening', false);
+export const EveningOn = ({servers}: ServerList) =>
+  sceneStory(servers, 'evening', true);
+export const NightOff = ({servers}: ServerList) =>
+  sceneStory(servers, 'night', false);
+export const NightOn = ({servers}: ServerList) =>
+  sceneStory(servers, 'night', true);
+
 const showDownloadProgress = (element?: Element) => {
   if (!element) return;
   const serverList = element as unknown as {

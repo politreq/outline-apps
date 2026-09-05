@@ -23,13 +23,13 @@ export default {
   component: 'root-navigation',
   args: {
     open: true,
-    dataCollectionPageUrl: 'https://getoutline.org/policies/data-collection',
+    showAppRoutingSettings: true,
   },
 };
 
-export const Example = ({open, dataCollectionPageUrl}: RootNavigation) =>
+export const Example = ({open, showAppRoutingSettings}: RootNavigation) =>
   html`<root-navigation
     .localize=${localize}
     .open=${open}
-    .dataCollectionPageUrl=${dataCollectionPageUrl}
+    .showAppRoutingSettings=${showAppRoutingSettings}
   ></root-navigation>`;

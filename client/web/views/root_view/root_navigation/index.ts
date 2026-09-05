@@ -23,8 +23,6 @@ export class RootNavigation extends LitElement {
   @property({type: Boolean}) open: boolean;
   @property({type: Boolean}) showQuit: boolean;
   @property({type: String}) align: 'left' | 'right';
-  @property({type: String}) dataCollectionPageUrl: string;
-  @property({type: Boolean}) showAppearanceView: boolean = false;
   @property({type: Boolean}) showAppRoutingSettings: boolean = false;
 
   static styles = css`
@@ -157,31 +155,6 @@ export class RootNavigation extends LitElement {
       color: var(--outline-primary);
     }
 
-    ul {
-      border-top: 1px solid var(--outline-hairline);
-      display: block;
-      list-style-type: none;
-      margin-bottom: 124px;
-      margin: 0;
-      padding: 0;
-    }
-
-    li {
-      color: var(--outline-text-color);
-      cursor: pointer;
-      display: block;
-      font-family: var(--outline-font-family);
-      padding: 8px 16px;
-      transition: visibility 0.3s ease;
-    }
-
-    li > a {
-      text-decoration: none;
-      color: var(--outline-text-color);
-      display: flex;
-      align-items: center;
-    }
-
     .backdrop {
       background-color: var(--outline-elevation-color);
       height: 100%;
@@ -238,25 +211,6 @@ export class RootNavigation extends LitElement {
             <md-icon slot="start">home</md-icon>
             ${this.localize('servers-menu-item')}
           </md-list-item>
-          <md-list-item @click=${() => this.changePage('about')}>
-            <md-ripple></md-ripple>
-            <md-icon slot="start">info</md-icon>
-            ${this.localize('about-page-title')}
-          </md-list-item>
-          <md-list-item @click=${() => this.changePage('language')}>
-            <md-ripple></md-ripple>
-            <md-icon slot="start">language</md-icon>
-            ${this.localize('change-language-page-title')}
-          </md-list-item>
-          ${this.showAppearanceView
-            ? html`
-                <md-list-item @click=${() => this.changePage('appearance')}>
-                  <md-ripple></md-ripple>
-                  <md-icon slot="start">brightness_medium</md-icon>
-                  ${this.localize('appearance-page-title')}
-                </md-list-item>
-              `
-            : nothing}
           ${this.showAppRoutingSettings
             ? html`
                 <md-list-item @click=${this.openAppRoutingSettings}>
@@ -266,6 +220,11 @@ export class RootNavigation extends LitElement {
                 </md-list-item>
               `
             : nothing}
+          <md-list-item @click=${() => this.changePage('about')}>
+            <md-ripple></md-ripple>
+            <md-icon slot="start">info</md-icon>
+            ${this.localize('about-page-title')}
+          </md-list-item>
           ${this.showQuit
             ? html`<md-list-item @click=${this.quit}>
                 <md-ripple></md-ripple>
@@ -274,11 +233,6 @@ export class RootNavigation extends LitElement {
               </md-list-item>`
             : nothing}
         </md-list>
-        <ul>
-          <li @click=${() => this.changePage('licenses')}>
-            ${this.localize('licenses-page-title')}
-          </li>
-        </ul>
       </nav>
     </div>`;
   }
