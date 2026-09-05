@@ -22,6 +22,7 @@ export enum SettingsKey {
   AUTO_CONNECT_DIALOG_DISMISSED = 'auto-connect-dialog-dismissed',
   PRIVACY_ACK = 'privacy-ack',
   APPEARANCE = 'appearance',
+  SELECTED_PROFILE = 'selected-profile',
 }
 
 // Theme options

@@ -20,7 +20,7 @@ import {RootNavigation} from './index';
 import {localize} from '../../../testing/localize';
 
 describe('RootNavigation', () => {
-  it('shows only the three Android destinations in the requested order', async () => {
+  it('shows the four Android destinations in the requested order', async () => {
     const navigation = await fixture<RootNavigation>(html`
       <root-navigation
         .localize=${localize}
@@ -40,6 +40,6 @@ describe('RootNavigation', () => {
         .trim()
     );
 
-    expect(labels).toEqual(['Home', 'VPN for apps', 'About']);
+    expect(labels).toEqual(['Home', 'Profiles', 'VPN for apps', 'About']);
   });
 });

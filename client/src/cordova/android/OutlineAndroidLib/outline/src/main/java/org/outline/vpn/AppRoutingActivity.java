@@ -15,23 +15,32 @@
 package org.outline.vpn;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.graphics.Insets;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.LruCache;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -49,7 +58,14 @@ import org.outline.R;
 
 /** Android-only screen for selecting applications that should bypass the VPN. */
 public class AppRoutingActivity extends Activity {
-  private static final int ACCENT_COLOR = Color.rgb(47, 190, 165);
+  // Same light palette as the web shell. Time-of-day scenes do not change the UI theme.
+  private static final int ACCENT_COLOR = Color.rgb(83, 118, 41);
+  private static final int BACKGROUND_COLOR = Color.rgb(255, 247, 232);
+  private static final int CARD_COLOR = Color.rgb(255, 250, 240);
+  private static final int PRIMARY_TEXT_COLOR = Color.rgb(74, 44, 29);
+  private static final int SECONDARY_TEXT_COLOR = Color.rgb(128, 99, 78);
+  private static final int BORDER_COLOR = Color.rgb(239, 214, 180);
+  private static final int SELECTED_COLOR = Color.rgb(237, 244, 216);
 
   private final ExecutorService executor = Executors.newSingleThreadExecutor();
   private final List<ApplicationItem> allApps = new ArrayList<>();
@@ -59,10 +75,24 @@ public class AppRoutingActivity extends Activity {
   private TextView selectedCount;
   private ListView appList;
   private ProgressBar progressBar;
-  private int backgroundColor;
-  private int cardColor;
-  private int primaryTextColor;
-  private int secondaryTextColor;
+  private EditText search;
+  private TextView reconnectMessage;
+  private final Runnable hideReconnectMessage =
+      () ->
+          reconnectMessage
+              .animate()
+              .alpha(0)
+              .setDuration(200)
+              .withEndAction(() -> reconnectMessage.setVisibility(View.GONE));
+
+  @Override
+  protected void attachBaseContext(Context base) {
+    Configuration configuration = new Configuration(base.getResources().getConfiguration());
+    configuration.setLocale(new Locale("ru"));
+    configuration.uiMode =
+        (configuration.uiMode & ~Configuration.UI_MODE_NIGHT_MASK) | Configuration.UI_MODE_NIGHT_NO;
+    super.attachBaseContext(base.createConfigurationContext(configuration));
+  }
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -75,88 +105,160 @@ public class AppRoutingActivity extends Activity {
   @Override
   protected void onDestroy() {
     executor.shutdownNow();
+    if (reconnectMessage != null) {
+      reconnectMessage.removeCallbacks(hideReconnectMessage);
+      reconnectMessage.animate().cancel();
+    }
     super.onDestroy();
   }
 
   private View buildContentView() {
     LinearLayout root = new LinearLayout(this);
+    root.setId(R.id.app_routing_root);
     root.setOrientation(LinearLayout.VERTICAL);
-    root.setBackgroundColor(backgroundColor);
+    root.setBackgroundColor(BACKGROUND_COLOR);
+    // Android 15+ enforces edge-to-edge. Apply system/keyboard insets exactly once,
+    // on this root, so the toolbar never overlaps the status bar or display cutout.
+    root.setOnApplyWindowInsetsListener(
+        (view, insets) -> {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Insets safe =
+                insets.getInsets(
+                    WindowInsets.Type.systemBars()
+                        | WindowInsets.Type.displayCutout()
+                        | WindowInsets.Type.ime());
+            view.setPadding(safe.left, safe.top, safe.right, safe.bottom);
+          } else {
+            view.setPadding(
+                insets.getSystemWindowInsetLeft(),
+                insets.getSystemWindowInsetTop(),
+                insets.getSystemWindowInsetRight(),
+                insets.getSystemWindowInsetBottom());
+          }
+          return insets;
+        });
 
     LinearLayout header = new LinearLayout(this);
+    header.setId(R.id.app_routing_header);
     header.setGravity(Gravity.CENTER_VERTICAL);
-    header.setPadding(dp(8), dp(12), dp(16), dp(8));
+    header.setMinimumHeight(dp(64));
+    header.setPadding(dp(12), dp(10), dp(16), dp(10));
 
-    TextView back = new TextView(this);
-    back.setText("‹");
-    back.setTextSize(42);
-    back.setGravity(Gravity.CENTER);
-    back.setTextColor(primaryTextColor);
+    ImageButton back = new ImageButton(this);
+    back.setId(R.id.app_routing_back_button);
+    back.setImageResource(R.drawable.ic_routing_back);
+    back.setImageTintList(ColorStateList.valueOf(PRIMARY_TEXT_COLOR));
+    back.setPadding(dp(12), dp(12), dp(12), dp(12));
+    back.setBackground(
+        new RippleDrawable(
+            ColorStateList.valueOf(BORDER_COLOR),
+            rounded(Color.rgb(255, 232, 199), 16, BORDER_COLOR),
+            null));
     back.setContentDescription(getString(R.string.app_routing_back));
     back.setOnClickListener(view -> finish());
-    header.addView(back, new LinearLayout.LayoutParams(dp(56), dp(56)));
+    header.addView(back, new LinearLayout.LayoutParams(dp(44), dp(44)));
 
     TextView title = new TextView(this);
+    title.setId(R.id.app_routing_title_text);
     title.setText(R.string.app_routing_title);
-    title.setTextSize(22);
-    title.setTextColor(primaryTextColor);
+    title.setTextSize(20);
+    title.setTextColor(PRIMARY_TEXT_COLOR);
+    title.setIncludeFontPadding(false);
+    title.setGravity(Gravity.CENTER_VERTICAL);
+    title.setPadding(dp(12), 0, 0, 0);
     title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
     header.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
     root.addView(header);
+    View headerLine = new View(this);
+    headerLine.setBackgroundColor(BORDER_COLOR);
+    root.addView(headerLine, new LinearLayout.LayoutParams(-1, dp(1)));
+
+    LinearLayout summary = new LinearLayout(this);
+    summary.setOrientation(LinearLayout.VERTICAL);
+    summary.setPadding(dp(18), dp(16), dp(18), dp(16));
+    summary.setBackground(rounded(CARD_COLOR, 24, BORDER_COLOR));
+    LinearLayout.LayoutParams summaryParams = new LinearLayout.LayoutParams(-1, -2);
+    summaryParams.setMargins(dp(12), dp(16), dp(12), dp(12));
+    root.addView(summary, summaryParams);
 
     TextView description = new TextView(this);
     description.setText(R.string.app_routing_description);
     description.setTextSize(15);
-    description.setTextColor(secondaryTextColor);
-    description.setPadding(dp(24), 0, dp(24), dp(12));
-    root.addView(description);
+    description.setTextColor(SECONDARY_TEXT_COLOR);
+    description.setLineSpacing(dp(2), 1);
+    summary.addView(description);
 
     selectedCount = new TextView(this);
+    selectedCount.setId(R.id.app_routing_count);
     selectedCount.setTextSize(14);
-    selectedCount.setTextColor(secondaryTextColor);
-    selectedCount.setAllCaps(true);
-    selectedCount.setPadding(dp(24), dp(4), dp(24), dp(8));
+    selectedCount.setTextColor(ACCENT_COLOR);
+    selectedCount.setTypeface(selectedCount.getTypeface(), android.graphics.Typeface.BOLD);
+    selectedCount.setPadding(0, dp(12), 0, 0);
     updateSelectedCount();
-    root.addView(selectedCount);
+    summary.addView(selectedCount);
 
-    EditText search = new EditText(this);
+    search = new EditText(this);
+    search.setId(R.id.app_routing_search);
     search.setSingleLine(true);
     search.setHint(R.string.app_routing_search_hint);
-    search.setTextColor(primaryTextColor);
-    search.setHintTextColor(secondaryTextColor);
+    search.setTextColor(PRIMARY_TEXT_COLOR);
+    search.setHintTextColor(SECONDARY_TEXT_COLOR);
     search.setTextSize(17);
-    search.setCompoundDrawablesWithIntrinsicBounds(android.R.drawable.ic_menu_search, 0, 0, 0);
+    search.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_routing_search, 0, 0, 0);
+    search.setCompoundDrawableTintList(ColorStateList.valueOf(SECONDARY_TEXT_COLOR));
     search.setCompoundDrawablePadding(dp(12));
-    search.setBackgroundTintList(ColorStateList.valueOf(secondaryTextColor));
+    search.setBackground(rounded(CARD_COLOR, 18, BORDER_COLOR));
+    search.setPadding(dp(16), dp(12), dp(16), dp(12));
+    search.setMinimumHeight(dp(52));
     LinearLayout.LayoutParams searchParams =
         new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    searchParams.setMargins(dp(24), 0, dp(24), dp(8));
+    searchParams.setMargins(dp(12), 0, dp(12), dp(12));
     root.addView(search, searchParams);
 
     FrameLayout listContainer = new FrameLayout(this);
+    listContainer.setBackground(rounded(CARD_COLOR, 24, BORDER_COLOR));
+    listContainer.setPadding(dp(1), dp(1), dp(1), dp(1));
+    listContainer.setClipToOutline(true);
     appList = new ListView(this);
-    appList.setDivider(null);
-    appList.setDividerHeight(0);
-    appList.setBackgroundColor(backgroundColor);
+    appList.setId(R.id.app_routing_list);
+    appList.setDivider(new ColorDrawable(BORDER_COLOR));
+    appList.setDividerHeight(dp(1));
+    appList.setBackgroundColor(CARD_COLOR);
     listContainer.addView(
         appList,
         new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
     progressBar = new ProgressBar(this);
+    progressBar.setIndeterminateTintList(ColorStateList.valueOf(ACCENT_COLOR));
     FrameLayout.LayoutParams progressParams =
         new FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER);
     listContainer.addView(progressBar, progressParams);
     LinearLayout.LayoutParams listParams =
         new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1);
+    listParams.setMargins(dp(12), 0, dp(12), 0);
     root.addView(listContainer, listParams);
+
+    reconnectMessage = new TextView(this);
+    reconnectMessage.setId(R.id.app_routing_reconnect_message);
+    reconnectMessage.setText(R.string.app_routing_reconnect_popup);
+    reconnectMessage.setTextSize(14);
+    reconnectMessage.setTextColor(CARD_COLOR);
+    reconnectMessage.setBackground(rounded(ACCENT_COLOR, 18, ACCENT_COLOR));
+    reconnectMessage.setPadding(dp(16), dp(14), dp(16), dp(14));
+    reconnectMessage.setElevation(dp(6));
+    reconnectMessage.setVisibility(View.GONE);
+    reconnectMessage.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+    FrameLayout.LayoutParams messageParams = new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM);
+    messageParams.setMargins(dp(12), dp(12), dp(12), dp(12));
+    listContainer.addView(reconnectMessage, messageParams);
 
     TextView reconnectNote = new TextView(this);
     reconnectNote.setText(R.string.app_routing_reconnect_note);
     reconnectNote.setTextSize(13);
-    reconnectNote.setTextColor(secondaryTextColor);
-    reconnectNote.setPadding(dp(24), dp(10), dp(24), dp(16));
+    reconnectNote.setTextColor(SECONDARY_TEXT_COLOR);
+    reconnectNote.setPadding(dp(24), dp(12), dp(24), dp(12));
     root.addView(reconnectNote);
 
     search.addTextChangedListener(
@@ -212,6 +314,7 @@ public class AppRoutingActivity extends Activity {
                 bypassedPackages.addAll(storedBypasses);
                 adapter = new AppListAdapter();
                 appList.setAdapter(adapter);
+                adapter.filter(search.getText().toString());
                 progressBar.setVisibility(View.GONE);
                 updateSelectedCount();
               });
@@ -246,23 +349,38 @@ public class AppRoutingActivity extends Activity {
     AppRoutingPreferences.setPackageBypassed(this, item.packageName, shouldBypass);
     adapter.notifyDataSetChanged();
     updateSelectedCount();
+    reconnectMessage.removeCallbacks(hideReconnectMessage);
+    reconnectMessage.animate().cancel();
+    if (reconnectMessage.getVisibility() != View.VISIBLE) {
+      reconnectMessage.setAlpha(0);
+      reconnectMessage.setVisibility(View.VISIBLE);
+    }
+    reconnectMessage.animate().alpha(1).setDuration(180).start();
+    reconnectMessage.postDelayed(hideReconnectMessage, 5000);
   }
 
   private void configureColors() {
-    int nightMode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
-    boolean isDark = nightMode == Configuration.UI_MODE_NIGHT_YES;
-    backgroundColor = isDark ? Color.rgb(18, 27, 36) : Color.rgb(246, 248, 249);
-    cardColor = isDark ? Color.rgb(28, 42, 54) : Color.WHITE;
-    primaryTextColor = isDark ? Color.WHITE : Color.rgb(30, 42, 48);
-    secondaryTextColor = isDark ? Color.rgb(183, 196, 204) : Color.rgb(93, 110, 118);
-    getWindow().setStatusBarColor(backgroundColor);
-    getWindow().setNavigationBarColor(backgroundColor);
-    if (!isDark) {
-      getWindow()
-          .getDecorView()
-          .setSystemUiVisibility(
-              View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+    getWindow().setStatusBarColor(BACKGROUND_COLOR);
+    getWindow().setNavigationBarColor(BACKGROUND_COLOR);
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+      getWindow().setDecorFitsSystemWindows(false);
     }
+    getWindow()
+        .getDecorView()
+        .setSystemUiVisibility(
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+  }
+
+  private GradientDrawable rounded(int color, int radius, int stroke) {
+    GradientDrawable drawable = new GradientDrawable();
+    drawable.setColor(color);
+    drawable.setCornerRadius(dp(radius));
+    drawable.setStroke(dp(1), stroke);
+    return drawable;
   }
 
   private int dp(int value) {
@@ -313,6 +431,8 @@ public class AppRoutingActivity extends Activity {
       holder.label.setText(item.label);
       holder.packageName.setText(item.packageName);
       holder.checkbox.setChecked(bypassedPackages.contains(item.packageName));
+      holder.root.setBackgroundColor(
+          bypassedPackages.contains(item.packageName) ? SELECTED_COLOR : CARD_COLOR);
       holder.icon.setImageDrawable(loadIcon(item.packageName));
       holder.root.setOnClickListener(view -> toggle(item));
       holder.root.setContentDescription(
@@ -360,38 +480,43 @@ public class AppRoutingActivity extends Activity {
       LinearLayout row = new LinearLayout(AppRoutingActivity.this);
       row.setOrientation(LinearLayout.HORIZONTAL);
       row.setGravity(Gravity.CENTER_VERTICAL);
-      row.setPadding(dp(20), dp(9), dp(18), dp(9));
-      row.setBackgroundColor(cardColor);
-      row.setMinimumHeight(dp(72));
+      row.setPadding(dp(14), dp(12), dp(10), dp(12));
+      row.setBackgroundColor(CARD_COLOR);
+      row.setMinimumHeight(dp(80));
+      row.setFocusable(true);
 
       ImageView icon = new ImageView(AppRoutingActivity.this);
       icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
-      row.addView(icon, new LinearLayout.LayoutParams(dp(48), dp(48)));
+      row.addView(icon, new LinearLayout.LayoutParams(dp(44), dp(44)));
+      icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
 
       LinearLayout labels = new LinearLayout(AppRoutingActivity.this);
       labels.setOrientation(LinearLayout.VERTICAL);
-      labels.setPadding(dp(16), 0, dp(10), 0);
+      labels.setPadding(dp(12), 0, dp(6), 0);
 
       TextView label = new TextView(AppRoutingActivity.this);
-      label.setTextSize(18);
-      label.setTextColor(primaryTextColor);
+      label.setTextSize(16);
+      label.setTextColor(PRIMARY_TEXT_COLOR);
       label.setMaxLines(1);
+      label.setEllipsize(TextUtils.TruncateAt.END);
       labels.addView(label);
 
       TextView packageName = new TextView(AppRoutingActivity.this);
       packageName.setTextSize(12);
-      packageName.setTextColor(secondaryTextColor);
+      packageName.setTextColor(SECONDARY_TEXT_COLOR);
       packageName.setMaxLines(1);
+      packageName.setEllipsize(TextUtils.TruncateAt.END);
       labels.addView(packageName);
       row.addView(labels, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
 
       CheckBox checkbox = new CheckBox(AppRoutingActivity.this);
       checkbox.setClickable(false);
       checkbox.setFocusable(false);
+      checkbox.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
       checkbox.setButtonTintList(
           new ColorStateList(
               new int[][] {new int[] {android.R.attr.state_checked}, new int[] {}},
-              new int[] {ACCENT_COLOR, secondaryTextColor}));
+              new int[] {ACCENT_COLOR, SECONDARY_TEXT_COLOR}));
       row.addView(checkbox, new LinearLayout.LayoutParams(dp(48), dp(48)));
       return new RowHolder(row, icon, label, packageName, checkbox);
     }

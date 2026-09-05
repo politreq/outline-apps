@@ -211,6 +211,11 @@ export class RootNavigation extends LitElement {
             <md-icon slot="start">home</md-icon>
             ${this.localize('servers-menu-item')}
           </md-list-item>
+          <md-list-item @click=${() => this.changePage('profiles')}>
+            <md-ripple></md-ripple>
+            <md-icon slot="start">folder</md-icon>
+            ${this.localize('profiles-page-title')}
+          </md-list-item>
           ${this.showAppRoutingSettings
             ? html`
                 <md-list-item @click=${this.openAppRoutingSettings}>

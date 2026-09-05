@@ -30,7 +30,7 @@ import morningOn from '../../../assets/home/morning-on.webp';
 import morningOff from '../../../assets/home/morning.webp';
 import nightOn from '../../../assets/home/night-on.webp';
 import nightOff from '../../../assets/home/night.webp';
-import {ServerConnectionState} from '../server_connection_indicator';
+import {activeProfile, hasActiveConnection} from '../profile_selection';
 import {ServerListItem, ServerListItemEvent} from '../server_list_item';
 
 type TimePeriod = 'morning' | 'day' | 'evening' | 'night';
@@ -92,21 +92,13 @@ function getMoscowTime() {
   return {period, time};
 }
 
-function hasActiveConnection(server: ServerListItem) {
-  return [
-    ServerConnectionState.CONNECTING,
-    ServerConnectionState.CONNECTED,
-    ServerConnectionState.RECONNECTING,
-  ].includes(server.connectionState);
-}
-
 @customElement('server-list')
 export class ServerList extends LitElement {
   @property({type: Boolean}) darkMode = false;
   @property({type: Object}) localize: Localizer = msg => msg;
   @property({type: Array}) servers: ServerListItem[] = [];
 
-  @state() private selectedServerId = '';
+  @property({type: String}) selectedServerId = '';
   @state() private period: TimePeriod = getMoscowTime().period;
   @state() private moscowTime = getMoscowTime().time;
   @state() private appUpdateState: AppUpdateState = 'hidden';
@@ -492,108 +484,6 @@ export class ServerList extends LitElement {
       font-size: 20px;
     }
 
-    .active-profile {
-      margin: 10px 0 11px;
-      color: var(--home-muted);
-      font-size: 15px;
-      text-align: center;
-    }
-    .active-profile strong {
-      color: var(--home-ink);
-      font-weight: 600;
-    }
-
-    .profiles-panel {
-      overflow: hidden;
-      background: rgb(255 250 240 / 88%);
-      border: 1px solid var(--home-line);
-      border-radius: 24px;
-      box-shadow: 0 10px 26px rgb(113 75 44 / 7%);
-    }
-    .section-heading {
-      display: flex;
-      min-height: 48px;
-      padding: 0 19px;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--home-line);
-    }
-    .section-heading h2 {
-      margin: 0;
-      font-size: 18px;
-    }
-    .profile-count {
-      display: grid;
-      width: 28px;
-      height: 28px;
-      place-items: center;
-      color: var(--home-muted);
-      background: #f8ead6;
-      border-radius: 50%;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .profile-row {
-      display: grid;
-      width: 100%;
-      min-height: 68px;
-      padding: 9px 17px;
-      grid-template-columns: 40px 1fr 24px;
-      gap: 12px;
-      align-items: center;
-      color: var(--home-ink);
-      background: transparent;
-      border: 0;
-      border-bottom: 1px solid var(--home-line);
-      text-align: left;
-      cursor: pointer;
-    }
-    .profile-row:last-child {
-      border-bottom: 0;
-    }
-    .profile-row.selected {
-      background: #fbf5e5;
-    }
-
-    .profile-check {
-      display: grid;
-      width: 36px;
-      height: 36px;
-      place-items: center;
-      color: white;
-      border: 2px solid #b29987;
-      border-radius: 50%;
-    }
-    .profile-check.connected {
-      background: var(--home-green);
-      border-color: var(--home-green);
-      box-shadow: 0 5px 12px rgb(92 126 42 / 18%);
-    }
-    .profile-check md-icon {
-      color: white;
-      font-size: 19px;
-    }
-    .profile-copy {
-      display: flex;
-      min-width: 0;
-      flex-direction: column;
-    }
-    .profile-copy strong {
-      overflow: hidden;
-      font-size: 17px;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .profile-copy small {
-      margin-top: 3px;
-      color: var(--home-muted);
-      font-size: 13px;
-    }
-    .profile-row > md-icon {
-      color: var(--home-ink);
-    }
-
     @keyframes room-one {
       50% {
         transform: translate3d(0.45%, -0.18%, 0) scale(1.006);
@@ -785,11 +675,7 @@ export class ServerList extends LitElement {
   }
 
   private get activeServer() {
-    return (
-      this.servers.find(server => hasActiveConnection(server)) ??
-      this.servers.find(server => server.id === this.selectedServerId) ??
-      this.servers[0]
-    );
+    return activeProfile(this.servers, this.selectedServerId);
   }
 
   private toggleConnection() {
@@ -873,37 +759,6 @@ export class ServerList extends LitElement {
           >${connected ? 'Все дома · VPN включён' : 'VPN выключен'}</strong
         >
       </div>
-      <p class="active-profile">Профиль: <strong>${server.name}</strong></p>
-      <section class="profiles-panel" aria-label="Профили">
-        <div class="section-heading">
-          <h2>Профили</h2>
-          <span class="profile-count">${this.servers.length}</span>
-        </div>
-        ${this.servers.map((profile, index) => {
-          const selected = profile.id === server.id;
-          const profileConnected = selected && hasActiveConnection(profile);
-          return html`
-            <button
-              class="profile-row ${selected ? 'selected' : ''}"
-              type="button"
-              @click=${() => (this.selectedServerId = profile.id)}
-            >
-              <span class="profile-check ${profileConnected ? 'connected' : ''}"
-                >${profileConnected ? html`<md-icon>check</md-icon>` : ''}</span
-              >
-              <span class="profile-copy">
-                <strong>${profile.name}</strong>
-                <small
-                  >${index === 0
-                    ? 'основной профиль'
-                    : 'дополнительный профиль'}</small
-                >
-              </span>
-              <md-icon>chevron_right</md-icon>
-            </button>
-          `;
-        })}
-      </section>
     `;
   }
 }

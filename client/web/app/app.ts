@@ -103,6 +103,7 @@ export class App {
     document = window.document
   ) {
     this.localize = this.rootEl.localize.bind(this.rootEl);
+    rootEl.selectedServerId = settings.get(SettingsKey.SELECTED_PROFILE) ?? '';
 
     this.syncServersToUI();
     rootEl.appVersion = environmentVars.APP_VERSION;
@@ -146,6 +147,10 @@ export class App {
       this.hideNavigation.bind(this)
     );
     this.rootEl.addEventListener('ChangePage', this.changePage.bind(this));
+    this.rootEl.addEventListener(
+      'SelectProfile',
+      this.selectProfile.bind(this)
+    );
     this.rootEl.addEventListener(
       'AddServerConfirmationRequested',
       this.requestAddServerConfirmation.bind(this)
@@ -407,6 +412,16 @@ export class App {
 
   private changePage(event: CustomEvent) {
     this.rootEl.changePage(event.detail.page);
+  }
+
+  private selectProfile(event: CustomEvent<{serverId: string}>) {
+    const {serverId} = event.detail;
+    if (!this.serverRepo.getById(serverId)) return;
+    this.settings.set(SettingsKey.SELECTED_PROFILE, serverId);
+    this.rootEl.selectedServerId = serverId;
+    this.rootEl.showToast(
+      'Профиль выбран. Если VPN уже включён, отключите его и подключитесь снова на главной.'
+    );
   }
 
   private async handleClipboardText(text: string) {
