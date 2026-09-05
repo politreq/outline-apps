@@ -291,8 +291,9 @@ export class ServerList extends LitElement {
     }
 
     .house-scene {
-      --door-control-x: 50.55%;
+      --door-control-x: 51.05%;
       --door-control-y: 79.55%;
+      --door-glow-diameter: 94%;
       position: relative;
       width: 100%;
       margin: 0;
@@ -378,19 +379,19 @@ export class ServerList extends LitElement {
     }
 
     .house-scene[data-period='morning'] {
-      --door-control-x: 50.2%;
+      --door-control-x: 51%;
       --door-control-y: 79.45%;
     }
     .house-scene[data-period='day'] {
-      --door-control-x: 50.4%;
+      --door-control-x: 51.35%;
       --door-control-y: 79.55%;
     }
     .house-scene[data-period='evening'] {
-      --door-control-x: 51.8%;
+      --door-control-x: 51%;
       --door-control-y: 79.65%;
     }
     .house-scene[data-period='night'] {
-      --door-control-x: 50.65%;
+      --door-control-x: 51.05%;
       --door-control-y: 79.65%;
     }
 
@@ -409,7 +410,6 @@ export class ServerList extends LitElement {
       background: transparent;
       border: 0;
       cursor: pointer;
-      filter: drop-shadow(0 2px 5px rgb(49 28 20 / 55%));
     }
     .door-button:active {
       transform: translate(-50%, -50%) scale(0.96);
@@ -421,36 +421,49 @@ export class ServerList extends LitElement {
 
     .door-button-content {
       position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+    }
+    .door-button-content::before {
+      position: absolute;
       top: 50%;
       left: 50%;
-      display: grid;
-      width: 66px;
-      height: 66px;
+      width: var(--door-glow-diameter);
+      aspect-ratio: 1;
+      content: '';
+      pointer-events: none;
       transform: translate(-50%, -50%);
-      place-items: center;
-      background: rgb(82 43 40 / 68%);
-      border: 2px solid rgb(255 239 220 / 48%);
+      background: radial-gradient(
+        circle,
+        rgb(230 249 170 / 70%) 0%,
+        rgb(184 224 94 / 38%) 48%,
+        rgb(151 194 68 / 12%) 88%,
+        transparent 100%
+      );
       border-radius: 50%;
-      box-shadow: 0 5px 14px rgb(38 20 17 / 48%);
-      transition:
-        background-color 500ms ease,
-        border-color 500ms ease,
-        box-shadow 500ms ease,
-        transform 160ms ease;
+      opacity: 0;
+      transition: opacity 500ms ease;
     }
-    .door-button.connected .door-button-content {
-      background: rgb(91 143 48 / 92%);
-      border-color: #e2f3aa;
-      box-shadow:
-        0 0 0 5px rgb(199 228 117 / 28%),
-        0 0 30px rgb(200 235 112 / 88%),
-        0 5px 14px rgb(38 20 17 / 42%);
+    .door-button.connected .door-button-content::before {
+      opacity: 1;
     }
     .power-icon {
+      position: relative;
+      z-index: 1;
       color: #fffdf0;
       width: 48px;
       height: 48px;
       pointer-events: none;
+      filter: drop-shadow(0 2px 4px rgb(49 28 20 / 78%));
+      transition:
+        color 500ms ease,
+        filter 500ms ease;
+    }
+    .door-button.connected .power-icon {
+      color: #f5ffd8;
+      filter: drop-shadow(0 0 6px rgb(222 246 151 / 92%))
+        drop-shadow(0 2px 3px rgb(49 28 20 / 60%));
     }
 
     .connection-pill {

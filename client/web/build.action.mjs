@@ -33,6 +33,7 @@ export async function main(...parameters) {
     getBuildParameters(parameters);
 
   await rmfr(path.resolve(getRootDir(), 'www'));
+  await rmfr(path.resolve(getRootDir(), 'client', 'www'));
 
   // write build environment
   await fs.mkdir(path.resolve(getRootDir(), 'www'), {recursive: true});
