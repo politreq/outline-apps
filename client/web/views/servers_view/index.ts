@@ -130,6 +130,7 @@ export class ServerList extends LitElement {
   @property({type: Object}) localize: Localizer = msg => msg;
   @property({type: Boolean}) shouldShowAccessKeyWikiLink = false;
   @property({type: Array}) servers: ServerListItem[] = [];
+  @property({type: String}) selectedServerId = '';
 
   get shouldShowZeroState() {
     return this.servers ? this.servers.length === 0 : false;
@@ -191,6 +192,7 @@ export class ServerList extends LitElement {
         <server-list
           ?darkMode=${this.darkMode}
           .servers=${this.servers}
+          .selectedServerId=${this.selectedServerId}
           .localize=${this.localize}
         ></server-list>
       `;

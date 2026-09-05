@@ -53,6 +53,8 @@ import '../views/root_view/error_details_dialog';
 // eslint-disable-next-line n/no-missing-import
 import '../views/servers_view';
 // eslint-disable-next-line n/no-missing-import
+import '../views/profiles_view';
+// eslint-disable-next-line n/no-missing-import
 import '../views/root_view/add_access_key_dialog';
 // eslint-disable-next-line n/no-missing-import
 import '../views/root_view/root_header';
@@ -314,10 +316,17 @@ export class AppRoot extends mixinBehaviors(
             id="serversView"
             dark-mode="[[darkMode]]"
             servers="[[servers]]"
+            selected-server-id="[[selectedServerId]]"
             localize="[[localize]]"
             should-show-access-key-wiki-link="[[useAltAccessMessage]]"
             on-add-server="promptAddServer"
           ></servers-view>
+          <profiles-view
+            name="profiles"
+            id="profilesView"
+            servers="[[servers]]"
+            selected-server-id="[[selectedServerId]]"
+          ></profiles-view>
           <contact-view
             name="contact"
             id="contactView"
@@ -430,6 +439,10 @@ export class AppRoot extends mixinBehaviors(
       },
       servers: {
         type: Array,
+      },
+      selectedServerId: {
+        type: String,
+        value: '',
       },
       // Tells AppLocalizeBehavior to bubble its
       // app-localize-resources-loaded event, allowing us listen for it on
@@ -629,7 +642,7 @@ export class AppRoot extends mixinBehaviors(
       this._openHelpPage(); // Fall-through to navigate to the default page.
     } else if (pageFromRoute === 'quit') {
       this.fire('QuitPressed');
-    } else if (['home', 'about', 'contact'].includes(pageFromRoute)) {
+    } else if (['home', 'profiles', 'about', 'contact'].includes(pageFromRoute)) {
       return pageFromRoute;
     }
     // No page found in the route (i.e. the url hash) means we are just starting up.
@@ -657,8 +670,7 @@ export class AppRoot extends mixinBehaviors(
   }
 
   _computeShouldShowAddButton(page) {
-    // Only show the add button if we're on the home page.
-    return page === 'home';
+    return page === 'home' || page === 'profiles';
   }
 
   _goBack() {

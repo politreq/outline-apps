@@ -1,6 +1,7 @@
 {
   "about-outline": "V domike is a warm family VPN client. Profiles and per-app rules are stored only on your device. Network connections use the open <a href={shadowsocksUrl}>Shadowsocks</a> protocol.",
   "about-page-title": "About",
+  "profiles-page-title": "Profiles",
   "accept": "Accept",
   "add-access-key-dialog-error-text": "Invalid access key.",
   "add-access-key-dialog-header": "Add VPN access key",

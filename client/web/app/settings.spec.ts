@@ -19,6 +19,13 @@ import {Settings, SettingsKey} from './settings';
 const FAKE_SETTINGS_KEYS = ['key', 'key1', 'key2'];
 
 describe('Settings', () => {
+  it('remembers the selected profile across app restarts', () => {
+    const storage = new InMemoryStorage();
+    new Settings(storage).set(SettingsKey.SELECTED_PROFILE, 'profile-2');
+    expect(new Settings(storage).get(SettingsKey.SELECTED_PROFILE)).toBe(
+      'profile-2'
+    );
+  });
   it('sets and gets settings', () => {
     const key = 'key';
     const value = 'value';

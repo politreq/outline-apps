@@ -1,6 +1,7 @@
 {
   "about-outline": "В домике – тёплый семейный VPN-клиент. Профили и правила для приложений сохраняются только на вашем устройстве. Сетевое соединение работает на открытом протоколе <a href={shadowsocksUrl}>Shadowsocks</a>.",
   "about-page-title": "О приложении",
+  "profiles-page-title": "Профили",
   "add-access-key-dialog-error-text": "Недействительный ключ доступа.",
   "add-access-key-dialog-header": "Добавление ключа доступа к VPN",
   "add-access-key-dialog-help-text": "Получите ключ доступа у администратора своего VPN-сервера.",

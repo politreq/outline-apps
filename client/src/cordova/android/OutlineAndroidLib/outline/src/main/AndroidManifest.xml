@@ -27,6 +27,6 @@
             android:name="org.outline.vpn.AppRoutingActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:theme="@android:style/Theme.Material.NoActionBar" />
+            android:theme="@style/VdomikeAppRoutingTheme" />
     </application>
 </manifest>

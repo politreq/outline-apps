@@ -18,7 +18,8 @@
 <resources>
   <string name="connected_server_state">Connected</string>
   <string name="reconnecting_server_state">Reconnecting...</string>
-  <string name="app_routing_title">VPN mode for apps</string>
+  <string name="app_routing_title">VPN для приложений</string>
+  <string name="app_routing_reconnect_popup">Переподключитесь к профилю, чтобы применить изменения.</string>
   <string name="app_routing_description">Checked apps connect directly, without VPN.</string>
   <string name="app_routing_selected_count">Without VPN: %1$d of %2$d</string>
   <string name="app_routing_search_hint">Search apps</string>
