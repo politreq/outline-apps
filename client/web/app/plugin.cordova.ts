@@ -26,3 +26,22 @@ export async function pluginExec<T>(
     cordova.exec(resolve, wrappedReject, OUTLINE_PLUGIN_NAME, cmd, args);
   });
 }
+
+export function pluginExecWithProgress<TResult, TProgress>(
+  cmd: string,
+  onProgress: (progress: TProgress) => void,
+  isProgress: (candidate: unknown) => candidate is TProgress,
+  ...args: unknown[]
+): Promise<TResult> {
+  return new Promise<TResult>((resolve, reject) => {
+    const wrappedReject = (e: unknown) => reject(deserializeError(e));
+    const wrappedResolve = (value: TResult | TProgress) => {
+      if (isProgress(value)) {
+        onProgress(value);
+        return;
+      }
+      resolve(value as TResult);
+    };
+    cordova.exec(wrappedResolve, wrappedReject, OUTLINE_PLUGIN_NAME, cmd, args);
+  });
+}

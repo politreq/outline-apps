@@ -242,7 +242,10 @@ public class OutlinePlugin extends CordovaPlugin {
         } else if (Action.CHECK_APP_UPDATE.is(action)) {
           callback.success(new AppUpdateManager(getBaseContext()).checkForUpdate());
         } else if (Action.DOWNLOAD_APP_UPDATE.is(action)) {
-          callback.success(new AppUpdateManager(getBaseContext()).downloadLatestUpdate());
+          callback.success(
+              new AppUpdateManager(getBaseContext()).downloadLatestUpdate(
+                  (downloadedBytes, totalBytes, percent) -> sendAppUpdateDownloadProgress(
+                      callback, downloadedBytes, totalBytes, percent)));
         } else if (Action.INSTALL_APP_UPDATE.is(action)) {
           callback.success(
               new AppUpdateManager(getBaseContext()).installDownloadedUpdate(args.getString(0)));
@@ -375,6 +378,23 @@ public class OutlinePlugin extends CordovaPlugin {
 
   private Context getBaseContext() {
     return this.cordova.getActivity().getApplicationContext();
+  }
+
+  private void sendAppUpdateDownloadProgress(
+      CallbackContext callback, long downloadedBytes, long totalBytes, int percent) {
+    JSONObject response = new JSONObject();
+    try {
+      response.put("type", "progress");
+      response.put("downloadedBytes", downloadedBytes);
+      response.put("totalBytes", totalBytes);
+      response.put("percent", percent);
+    } catch (JSONException e) {
+      LOG.log(Level.WARNING, "Failed to build app update progress", e);
+      return;
+    }
+    PluginResult result = new PluginResult(PluginResult.Status.OK, response);
+    result.setKeepCallback(true);
+    callback.sendPluginResult(result);
   }
 
   private void sendActionResult(final CallbackContext callback, @Nullable PlatformError error) {

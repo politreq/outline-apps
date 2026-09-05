@@ -112,6 +112,7 @@ export class ServerList extends LitElement {
   @state() private appUpdateState: AppUpdateState = 'hidden';
   @state() private appUpdateRelease?: AppRelease;
   @state() private downloadedUpdatePath = '';
+  @state() private appUpdateProgress = 0;
 
   private clockTimer?: number;
   private updateCheckTimer?: number;
@@ -218,6 +219,40 @@ export class ServerList extends LitElement {
       line-height: 1.25;
       -webkit-box-orient: vertical;
       -webkit-line-clamp: 2;
+    }
+    .update-progress {
+      display: grid;
+      grid-column: 2 / -1;
+      grid-template-columns: minmax(0, 1fr) 34px;
+      gap: 8px;
+      align-items: center;
+    }
+    .update-progress progress {
+      width: 100%;
+      height: 8px;
+      overflow: hidden;
+      appearance: none;
+      background: #dce7bd;
+      border: 0;
+      border-radius: 999px;
+    }
+    .update-progress progress::-webkit-progress-bar {
+      background: #dce7bd;
+      border-radius: 999px;
+    }
+    .update-progress progress::-webkit-progress-value {
+      background: var(--home-green);
+      border-radius: 999px;
+      transition: width 220ms ease;
+    }
+    .update-progress progress::-moz-progress-bar {
+      background: var(--home-green);
+      border-radius: 999px;
+    }
+    .update-progress strong {
+      color: var(--home-green-dark);
+      font-size: 11px;
+      text-align: right;
     }
     .update-action {
       min-height: 34px;
@@ -600,6 +635,7 @@ export class ServerList extends LitElement {
   }
 
   private async checkForAppUpdate() {
+    this.appUpdateProgress = 0;
     try {
       const result = await this.appUpdater.check();
       if (result.available) {
@@ -617,8 +653,11 @@ export class ServerList extends LitElement {
 
   private async downloadAppUpdate() {
     this.appUpdateState = 'downloading';
+    this.appUpdateProgress = 0;
     try {
-      const update = await this.appUpdater.download();
+      const update = await this.appUpdater.download(progress => {
+        this.appUpdateProgress = progress.percent;
+      });
       this.appUpdateRelease = update;
       this.downloadedUpdatePath = update.filePath;
       await this.installAppUpdate();
@@ -651,7 +690,9 @@ export class ServerList extends LitElement {
       this.appUpdateState === 'available'
         ? `Вышла версия ${release?.versionName ?? ''}`
         : this.appUpdateState === 'downloading'
-          ? 'Скачиваем обновление…'
+          ? this.appUpdateProgress < 100
+            ? 'Скачиваем обновление…'
+            : 'Проверяем обновление…'
           : this.appUpdateState === 'permission'
             ? 'Разрешите установку'
             : this.appUpdateState === 'installing'
@@ -666,7 +707,9 @@ export class ServerList extends LitElement {
             ? 'Открылось системное окно Android.'
             : this.appUpdateState === 'error'
               ? 'Проверьте интернет и попробуйте ещё раз.'
-              : 'Проверяем файл и подпись перед установкой.';
+              : this.appUpdateProgress < 100
+                ? `Загружено ${this.appUpdateProgress}% файла.`
+                : 'Загрузка завершена. Проверяем файл и подпись.';
     const action =
       this.appUpdateState === 'permission'
         ? 'Продолжить'
@@ -708,6 +751,16 @@ export class ServerList extends LitElement {
         >
           ${action}
         </button>
+        ${this.appUpdateState === 'downloading'
+          ? html`<div class="update-progress">
+              <progress
+                aria-label="Скачивание обновления"
+                max="100"
+                value=${this.appUpdateProgress}
+              ></progress>
+              <strong>${this.appUpdateProgress}%</strong>
+            </div>`
+          : ''}
       </aside>
     `;
   }

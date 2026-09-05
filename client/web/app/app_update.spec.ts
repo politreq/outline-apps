@@ -1,7 +1,11 @@
 // Copyright 2026 The Outline Authors
 // Licensed under the Apache License, Version 2.0.
 
-import {isAndroidAppUpdateSupported, isUpdateAvailable} from './app_update';
+import {
+  isAndroidAppUpdateSupported,
+  isAppUpdateDownloadProgress,
+  isUpdateAvailable,
+} from './app_update';
 
 describe('Android app update policy', () => {
   it('offers only a strictly newer versionCode', () => {
@@ -22,5 +26,25 @@ describe('Android app update policy', () => {
       })
     ).toBe(false);
     expect(isAndroidAppUpdateSupported({})).toBe(false);
+  });
+
+  it('accepts only valid native download progress events', () => {
+    expect(
+      isAppUpdateDownloadProgress({
+        type: 'progress',
+        downloadedBytes: 25,
+        totalBytes: 100,
+        percent: 25,
+      })
+    ).toBe(true);
+    expect(
+      isAppUpdateDownloadProgress({
+        type: 'progress',
+        downloadedBytes: 101,
+        totalBytes: 100,
+        percent: 101,
+      })
+    ).toBe(false);
+    expect(isAppUpdateDownloadProgress({filePath: '/update.apk'})).toBe(false);
   });
 });

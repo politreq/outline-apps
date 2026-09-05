@@ -43,6 +43,7 @@ export class AboutView extends LitElement {
   @state() private updateStatus: UpdateStatus = 'unsupported';
   @state() private updateRelease?: AppRelease;
   @state() private downloadedUpdatePath = '';
+  @state() private downloadProgress = 0;
 
   private readonly appUpdater = new AndroidAppUpdater();
 
@@ -200,6 +201,45 @@ export class AboutView extends LitElement {
       line-height: 1.4;
     }
 
+    .download-progress {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 38px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .download-progress progress {
+      width: 100%;
+      height: 10px;
+      overflow: hidden;
+      appearance: none;
+      background: #dce7bd;
+      border: 0;
+      border-radius: 999px;
+    }
+
+    .download-progress progress::-webkit-progress-bar {
+      background: #dce7bd;
+      border-radius: 999px;
+    }
+
+    .download-progress progress::-webkit-progress-value {
+      background: #769b37;
+      border-radius: 999px;
+      transition: width 220ms ease;
+    }
+
+    .download-progress progress::-moz-progress-bar {
+      background: #769b37;
+      border-radius: 999px;
+    }
+
+    .download-progress strong {
+      color: #537629;
+      font-size: 13px;
+      text-align: right;
+    }
+
     .update-action {
       min-height: 46px;
       padding: 0 18px;
@@ -243,6 +283,7 @@ export class AboutView extends LitElement {
 
   private async checkForUpdate() {
     this.updateStatus = 'checking';
+    this.downloadProgress = 0;
     try {
       const result = await this.appUpdater.check();
       this.updateRelease = result;
@@ -255,8 +296,11 @@ export class AboutView extends LitElement {
 
   private async downloadUpdate() {
     this.updateStatus = 'downloading';
+    this.downloadProgress = 0;
     try {
-      const update = await this.appUpdater.download();
+      const update = await this.appUpdater.download(progress => {
+        this.downloadProgress = progress.percent;
+      });
       this.updateRelease = update;
       this.downloadedUpdatePath = update.filePath;
       await this.installUpdate();
@@ -306,7 +350,13 @@ export class AboutView extends LitElement {
           text: `Доступна версия ${this.updateRelease?.versionName ?? ''}`,
         };
       case 'downloading':
-        return {icon: 'download', text: 'Скачиваем и проверяем обновление…'};
+        return {
+          icon: 'download',
+          text:
+            this.downloadProgress < 100
+              ? `Скачиваем обновление — ${this.downloadProgress}%`
+              : 'Проверяем загруженное обновление…',
+        };
       case 'permission':
         return {
           icon: 'security',
@@ -359,6 +409,16 @@ export class AboutView extends LitElement {
           <md-icon>${content.icon}</md-icon>
           <span>${content.text}</span>
         </p>
+        ${this.updateStatus === 'downloading'
+          ? html`<div class="download-progress">
+              <progress
+                aria-label="Скачивание обновления"
+                max="100"
+                value=${this.downloadProgress}
+              ></progress>
+              <strong>${this.downloadProgress}%</strong>
+            </div>`
+          : ''}
         ${this.updateStatus === 'available' && this.updateRelease?.releaseNotes
           ? html`<p class="update-notes">${this.updateRelease.releaseNotes}</p>`
           : ''}

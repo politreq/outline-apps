@@ -60,6 +60,10 @@ final class AppUpdateManager {
   private static final Set<Integer> REDIRECT_CODES =
       new HashSet<>(Arrays.asList(301, 302, 303, 307, 308));
 
+  interface DownloadProgressListener {
+    void onProgress(long downloadedBytes, long totalBytes, int percent);
+  }
+
   private final Context context;
   private final URI manifestUri;
 
@@ -81,7 +85,8 @@ final class AppUpdateManager {
     }
   }
 
-  JSONObject downloadLatestUpdate() throws AppUpdateException {
+  JSONObject downloadLatestUpdate(DownloadProgressListener progressListener)
+      throws AppUpdateException {
     AppRelease release = fetchLatestRelease();
     if (release.versionCode <= installedVersionCode()) {
       throw new AppUpdateException("up_to_date");
@@ -111,6 +116,8 @@ final class AppUpdateManager {
              FileOutputStream output = new FileOutputStream(partial)) {
           byte[] buffer = new byte[BUFFER_SIZE];
           long downloaded = 0;
+          int lastProgress = 0;
+          progressListener.onProgress(downloaded, release.fileSize, lastProgress);
           int count;
           while ((count = input.read(buffer)) != -1) {
             if (count == 0) {
@@ -122,6 +129,11 @@ final class AppUpdateManager {
             }
             output.write(buffer, 0, count);
             digest.update(buffer, 0, count);
+            int progress = (int) Math.min(100, downloaded * 100 / release.fileSize);
+            if (progress != lastProgress) {
+              lastProgress = progress;
+              progressListener.onProgress(downloaded, release.fileSize, progress);
+            }
           }
         }
       } finally {
