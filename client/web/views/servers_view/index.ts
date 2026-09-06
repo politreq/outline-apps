@@ -51,10 +51,11 @@ export class ServerList extends LitElement {
          * card under it and breaking scrolling.
          */
         height: calc(100vh - 64px - var(--outline-safe-area-top));
+        height: calc(100dvh - 64px - var(--outline-safe-area-top));
         justify-content: center;
         line-height: 1.25rem;
         margin: auto;
-        max-width: 400px;
+        max-width: 440px;
         overflow-y: auto;
         width: 100%;
       }
