@@ -32,6 +32,7 @@ import morningOff from '../../../assets/home/morning.webp';
 import nightOn from '../../../assets/home/night-on.webp';
 import nightOff from '../../../assets/home/night.webp';
 import {activeProfile, hasActiveConnection} from '../profile_selection';
+import {ServerConnectionState} from '../server_connection_indicator';
 import {ServerListItem, ServerListItemEvent} from '../server_list_item';
 
 type TimePeriod = 'morning' | 'day' | 'evening' | 'night';
@@ -68,8 +69,7 @@ const SCENES: Record<
   },
 };
 
-function getMoscowTime() {
-  const now = new Date();
+export function getMoscowTime(now = new Date()) {
   const parts = new Intl.DateTimeFormat('ru-RU', {
     timeZone: 'Europe/Moscow',
     hour: '2-digit',
@@ -126,11 +126,12 @@ export class ServerList extends LitElement {
       --home-off: #8b5d56;
       --home-off-pale: #f3e4df;
       box-sizing: border-box;
-      display: block;
+      display: flex;
+      flex-direction: column;
       height: 100%;
       margin: 0 auto;
       overflow-y: auto;
-      padding: 10px 12px 28px;
+      padding: 8px 16px max(40px, env(safe-area-inset-bottom));
       width: 100%;
       background: var(--home-bg);
       color: var(--home-ink);
@@ -144,23 +145,26 @@ export class ServerList extends LitElement {
       -webkit-tap-highlight-color: transparent;
     }
 
+    .home-album {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+      flex: 1 0 auto;
+    }
     .time-chip {
-      position: relative;
-      z-index: 4;
       display: grid;
-      width: max-content;
-      max-width: 92%;
-      min-height: 38px;
-      margin: 0 auto -22px;
-      padding: 7px 13px;
-      grid-template-columns: 20px auto auto;
-      gap: 7px;
+      width: 100%;
+      min-height: 78px;
+      margin: 0;
+      padding: 14px 16px;
+      grid-template-columns: 36px minmax(0, 1fr) auto;
+      gap: 10px;
       align-items: center;
-      color: var(--home-terracotta-dark);
-      background: rgb(255 250 240 / 94%);
+      color: var(--home-ink);
+      background: var(--home-paper);
       border: 1px solid var(--home-line);
       border-radius: 18px;
-      box-shadow: 0 7px 20px rgb(89 55 30 / 12%);
     }
 
     .update-card {
@@ -273,15 +277,25 @@ export class ServerList extends LitElement {
 
     .time-chip md-icon {
       color: var(--home-terracotta-dark);
-      font-size: 18px;
+      width: 36px;
+      height: 36px;
+      font-size: 36px;
     }
     .time-chip strong {
-      font-size: 13px;
+      font-size: 18px;
+      line-height: 1.25;
     }
-    .time-chip small {
-      color: var(--home-muted);
+    .moscow-clock {
+      display: grid;
+      gap: 4px;
+      text-align: center;
+      font-size: 22px;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .moscow-clock small {
       font-size: 11px;
-      font-weight: 500;
+      color: var(--home-muted);
     }
 
     .house-scene {
@@ -292,21 +306,26 @@ export class ServerList extends LitElement {
       width: 100%;
       margin: 0;
       overflow: hidden;
-      aspect-ratio: 4 / 5;
-      background: #f7ead4;
-      border: 1px solid #ead1ac;
-      border-radius: 34px;
-      box-shadow: 0 14px 30px rgb(90 55 28 / 12%);
+      aspect-ratio: 2 / 3;
+      background: var(--scene-sky, #081c30);
+      background-size: 100% 200%;
+      background-position: center top;
+      background-repeat: no-repeat;
+      flex: none;
+      border: 0;
+      border-radius: 50% 50% 24px 24px / 24% 24% 24px 24px;
     }
 
-    .house-scene::after {
+    /* Crop only the garden edges, never stretch the art. Every room mask and
+       the door control use this same 4:5 coordinate space in all eight states. */
+    .scene-canvas {
       position: absolute;
-      z-index: 2;
-      content: '';
-      pointer-events: none;
-      inset: 0;
-      border: 6px solid rgb(255 250 240 / 38%);
-      border-radius: inherit;
+      bottom: 0;
+      left: 50%;
+      height: calc(100% - 40px);
+      aspect-ratio: 4 / 5;
+      transform: translateX(-50%);
+      mask-image: linear-gradient(transparent, black 12px);
     }
 
     .scene-layer,
@@ -373,18 +392,22 @@ export class ServerList extends LitElement {
     }
 
     .house-scene[data-period='morning'] {
+      --scene-sky: #dbd8c5;
       --door-control-x: 51%;
       --door-control-y: 79.45%;
     }
     .house-scene[data-period='day'] {
+      --scene-sky: #aed5e6;
       --door-control-x: 51.35%;
       --door-control-y: 79.55%;
     }
     .house-scene[data-period='evening'] {
+      --scene-sky: #17202c;
       --door-control-x: 51%;
       --door-control-y: 79.65%;
     }
     .house-scene[data-period='night'] {
+      --scene-sky: #081c30;
       --door-control-x: 51.05%;
       --door-control-y: 79.65%;
     }
@@ -411,6 +434,11 @@ export class ServerList extends LitElement {
     .door-button:disabled {
       cursor: default;
       opacity: 0.55;
+    }
+    .door-button:focus-visible {
+      outline: 2px solid #fffaf0;
+      outline-offset: -6px;
+      border-radius: 48% 48% 8px 8px;
     }
 
     .door-button-content {
@@ -460,30 +488,71 @@ export class ServerList extends LitElement {
         drop-shadow(0 2px 3px rgb(49 28 20 / 60%));
     }
 
-    .connection-pill {
-      display: flex;
-      width: max-content;
-      max-width: 94%;
-      min-height: 40px;
-      margin: 10px auto 0;
-      padding: 7px 16px;
-      align-items: center;
-      justify-content: center;
+    .connection-status {
+      display: grid;
+      min-height: 72px;
+      align-content: center;
+      justify-items: center;
       gap: 8px;
+      padding: 8px 0;
       color: var(--home-off);
-      background: var(--home-off-pale);
-      border: 1px solid #d8aaa1;
-      border-radius: 24px;
-      font-size: 14px;
+      text-align: center;
     }
-    .connection-pill.connected {
+    .connection-status.connected {
       color: var(--home-green-dark);
-      background: var(--home-green-pale);
-      border-color: #a8bd72;
     }
-    .connection-pill md-icon {
+    .connection-status h2 {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin: 0;
+      font-size: clamp(27px, 8vw, 36px);
+      font-weight: 700;
+      line-height: 1.12;
+      letter-spacing: -0.6px;
+    }
+    .connection-status p {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.3;
+    }
+    .connection-status md-icon {
       color: currentColor;
-      font-size: 20px;
+      width: 28px;
+      height: 28px;
+      font-size: 28px;
+    }
+    @media (max-width: 350px) {
+      .time-chip {
+        padding: 12px;
+        gap: 8px;
+        grid-template-columns: 28px minmax(0, 1fr) auto;
+      }
+      .time-chip strong {
+        font-size: 16px;
+      }
+      .time-chip md-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 28px;
+      }
+      .moscow-clock {
+        font-size: 20px;
+      }
+    }
+    @media (max-height: 740px) {
+      .home-album {
+        gap: 12px;
+      }
+      .connection-status {
+        min-height: 72px;
+      }
+      .connection-status h2 {
+        font-size: 28px;
+      }
+      .time-chip {
+        min-height: 64px;
+      }
     }
 
     @keyframes room-one {
@@ -518,6 +587,10 @@ export class ServerList extends LitElement {
       }
       .room-motion {
         animation: none;
+      }
+      .door-button-content::before,
+      .power-icon {
+        transition: none;
       }
     }
   `;
@@ -697,9 +770,8 @@ export class ServerList extends LitElement {
 
   private renderSceneLayer(image: string, connectedLayer: boolean) {
     const rooms = ['one', 'two', 'three', 'four', 'attic'];
-    const connected = Boolean(
-      this.activeServer && hasActiveConnection(this.activeServer)
-    );
+    const connected =
+      this.activeServer?.connectionState === ServerConnectionState.CONNECTED;
     return html`
       <div
         class="scene-layer ${connectedLayer
@@ -724,45 +796,82 @@ export class ServerList extends LitElement {
   render() {
     const server = this.activeServer;
     if (!server) return html``;
-    const connected = hasActiveConnection(server);
+    const connected =
+      server.connectionState === ServerConnectionState.CONNECTED;
+    const transitioning = [
+      ServerConnectionState.CONNECTING,
+      ServerConnectionState.RECONNECTING,
+      ServerConnectionState.DISCONNECTING,
+    ].includes(server.connectionState);
+    const active = hasActiveConnection(server);
+    const heading = server.errorMessageId
+      ? 'Нет соединения'
+      : transitioning
+        ? server.connectionState === ServerConnectionState.DISCONNECTING
+          ? 'Отключаемся'
+          : 'Подключаемся'
+        : connected
+          ? 'Все дома'
+          : 'VPN выключен';
+    const hint = server.errorMessageId
+      ? 'Проверьте профиль в меню'
+      : transitioning
+        ? 'Пожалуйста, подождите'
+        : connected
+          ? 'VPN включён'
+          : 'Нажмите на дверь';
     const scene = SCENES[this.period];
 
     return html`
       ${this.renderAppUpdate()}
-      <div class="time-chip">
-        <md-icon>${scene.icon}</md-icon>
-        <strong>${scene.greeting}</strong>
-        <small>${this.moscowTime} МСК</small>
-      </div>
-      <figure
-        class="house-scene"
-        data-period=${this.period}
-        data-connected=${connected ? 'true' : 'false'}
-      >
-        ${this.renderSceneLayer(scene.off, false)}
-        ${this.renderSceneLayer(scene.on, true)}
-        <button
-          class="door-button ${connected ? 'connected' : 'disconnected'}"
-          type="button"
-          aria-label=${connected ? 'Отключить VPN' : 'Включить VPN'}
-          aria-pressed=${connected ? 'true' : 'false'}
-          ?disabled=${server.disabled || Boolean(server.errorMessageId)}
-          @click=${this.toggleConnection}
+      <section class="home-album" aria-label="Домой">
+        <div
+          class="connection-status ${connected ? 'connected' : ''}"
+          role="status"
+          aria-live="polite"
         >
-          <span class="door-button-content">
-            <iron-icon class="power-icon" icon="power-settings-new"></iron-icon>
+          <h2>
+            ${heading}${connected ? html`<md-icon>verified_user</md-icon>` : ''}
+          </h2>
+          <p>${hint}</p>
+        </div>
+        <figure
+          class="house-scene"
+          style=${`background-image: url('${scene.off}')`}
+          data-period=${this.period}
+          data-connected=${connected ? 'true' : 'false'}
+        >
+          <div class="scene-canvas">
+            ${this.renderSceneLayer(scene.off, false)}
+            ${this.renderSceneLayer(scene.on, true)}
+            <button
+              class="door-button ${connected ? 'connected' : 'disconnected'}"
+              type="button"
+              aria-label=${active ? 'Отключить VPN' : 'Включить VPN'}
+              aria-pressed=${connected ? 'true' : 'false'}
+              ?disabled=${server.disabled || Boolean(server.errorMessageId)}
+              @click=${this.toggleConnection}
+            >
+              <span class="door-button-content">
+                <iron-icon
+                  class="power-icon"
+                  icon="power-settings-new"
+                ></iron-icon>
+              </span>
+            </button>
+          </div>
+        </figure>
+        <div class="time-chip">
+          <md-icon aria-hidden="true">${scene.icon}</md-icon>
+          <strong>${scene.greeting}</strong>
+          <span
+            class="moscow-clock"
+            aria-label=${`${this.moscowTime}, московское время`}
+          >
+            <time>${this.moscowTime}</time><small>МСК</small>
           </span>
-        </button>
-      </figure>
-      <div
-        class="connection-pill ${connected ? 'connected' : ''}"
-        role="status"
-      >
-        <md-icon>${connected ? 'verified_user' : 'power_settings_new'}</md-icon>
-        <strong
-          >${connected ? 'Все дома · VPN включён' : 'VPN выключен'}</strong
-        >
-      </div>
+        </div>
+      </section>
     `;
   }
 }

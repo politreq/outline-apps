@@ -75,15 +75,41 @@ export class RootHeader extends LitElement {
     .hidden {
       visibility: hidden;
     }
+    header.home-header {
+      justify-content: flex-start;
+      gap: 16px;
+      padding-inline: 16px;
+      border-bottom: 0;
+    }
+    .home-header md-icon-button {
+      background: transparent;
+      border-color: transparent;
+    }
+    .home-header .title {
+      gap: 8px;
+    }
+    .home-header h1 {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .home-header .hidden {
+      display: none;
+    }
+    .home-header .add-button {
+      margin-left: auto;
+    }
   `;
 
   render() {
-    return html`<header>
+    return html`<header class=${!this.showBackButton ? 'home-header' : ''}>
       ${this.showBackButton
-        ? html`<md-icon-button @click=${this.returnHome}>
+        ? html`<md-icon-button aria-label="Домой" @click=${this.returnHome}>
             <md-icon>arrow_back</md-icon>
           </md-icon-button>`
-        : html`<md-icon-button @click=${this.openNavigation}>
+        : html`<md-icon-button
+            aria-label="Открыть меню"
+            @click=${this.openNavigation}
+          >
             <md-icon>menu</md-icon>
           </md-icon-button>`}
       <div class="title">
@@ -91,7 +117,8 @@ export class RootHeader extends LitElement {
         <h1>${this.title || 'В домике'}</h1>
       </div>
       <md-icon-button
-        class=${classMap({hidden: !this.showAddButton})}
+        class=${classMap({'add-button': true, hidden: !this.showAddButton})}
+        aria-label="Добавить профиль"
         @click=${this.openAddAccessKey}
       >
         <md-icon>add</md-icon>
