@@ -21,19 +21,20 @@ import (
 	"log/slog"
 	"sync"
 
-	"localhost/client/go/outline/connectivity"
-	perrs "localhost/client/go/outline/platerrors"
 	"golang.getoutline.org/sdk/network/lwip2transport"
 	"golang.getoutline.org/sdk/network/packetrelay"
 	"golang.getoutline.org/sdk/transport"
+	"localhost/client/go/outline/connectivity"
+	perrs "localhost/client/go/outline/platerrors"
 )
 
 // RemoteDevice is an IO device that connects to a remote Outline server.
 type RemoteDevice struct {
 	io.ReadWriteCloser
 
-	sd transport.StreamDialer
-	pr packetrelay.PacketRelay
+	sd               transport.StreamDialer
+	pr               packetrelay.PacketRelay
+	closePacketRelay func()
 
 	// health check fields
 	tcpMu        sync.Mutex
@@ -52,10 +53,12 @@ func ConnectRemoteDevice(ctx context.Context, sd transport.StreamDialer, pr pack
 		return nil, errCancelled(ctx.Err())
 	}
 
-	dev := &RemoteDevice{sd: sd, pr: pr}
+	guardedRelay, closeRelay := devicePacketRelay(pr)
+	dev := &RemoteDevice{sd: sd, pr: guardedRelay, closePacketRelay: closeRelay}
 	dev.tcpCheckDone.Go(dev.checkTCPHealthAndUpdate)
 	dev.ReadWriteCloser, err = lwip2transport.ConfigureDeviceWithRelay(dev.sd, dev.pr)
 	if err != nil {
+		closeRelay()
 		return nil, errSetupHandler("remote device failed to configure network stack", err)
 	}
 	slog.Debug("remote device lwIP network stack configured")
@@ -65,6 +68,9 @@ func ConnectRemoteDevice(ctx context.Context, sd transport.StreamDialer, pr pack
 
 // Close closes the connection to the Outline server.
 func (dev *RemoteDevice) Close() (err error) {
+	if dev.closePacketRelay != nil {
+		dev.closePacketRelay()
+	}
 	if dev.ReadWriteCloser != nil {
 		err = dev.ReadWriteCloser.Close()
 	}
