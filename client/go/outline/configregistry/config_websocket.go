@@ -20,16 +20,30 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"time"
 
-	"localhost/client/go/configyaml"
-	"localhost/client/go/outline/useragent"
 	"golang.getoutline.org/sdk/transport"
 	"golang.getoutline.org/sdk/x/websocket"
+	"localhost/client/go/configyaml"
+	"localhost/client/go/outline/tlscompat"
+	"localhost/client/go/outline/useragent"
 )
 
 type WebsocketEndpointConfig struct {
 	URL      string
 	Endpoint any
+}
+
+const websocketConnectTimeout = 15 * time.Second
+
+// Limit only connection establishment (TCP, TLS and HTTP upgrade), not the
+// lifetime of the established tunnel. Earlier caller deadlines still apply.
+func boundedWebsocketConnect[C any](connect func(context.Context) (C, error)) ConnectFunc[C] {
+	return func(ctx context.Context) (C, error) {
+		ctx, cancel := context.WithTimeout(ctx, websocketConnectTimeout)
+		defer cancel()
+		return connect(ctx)
+	}
 }
 
 func NewWebsocketStreamEndpointSubParser(parseSE configyaml.ParseFunc[*Endpoint[transport.StreamConn]]) func(ctx context.Context, input map[string]any) (*Endpoint[transport.StreamConn], error) {
@@ -79,13 +93,14 @@ func parseWebsocketEndpoint[ConnType any](ctx context.Context, configMap map[str
 	headers := http.Header(map[string][]string{
 		"User-Agent": {useragent.GetOutlineUserAgent()},
 	})
-	connect, err := newWE(url.String(), transport.FuncStreamEndpoint(se.Connect), websocket.WithHTTPHeaders(headers))
+	connect, err := newWE(url.String(), transport.FuncStreamEndpoint(se.Connect),
+		websocket.WithHTTPHeaders(headers), websocket.WithTLSConfig(tlscompat.Config()))
 	if err != nil {
 		return nil, err
 	}
 
 	return &Endpoint[ConnType]{
 		ConnectionProviderInfo: se.ConnectionProviderInfo,
-		Connect:                connect,
+		Connect:                boundedWebsocketConnect(connect),
 	}, nil
 }

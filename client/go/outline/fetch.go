@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"localhost/client/go/outline/platerrors"
+	"localhost/client/go/outline/tlscompat"
 )
 
 const fetchTimeout = 10 * time.Second
@@ -29,8 +30,15 @@ const fetchTimeout = 10 * time.Second
 // The function makes an HTTP GET request to the specified URL and returns the response body as a
 // string. If the request fails or the server returns a non-2xx status code, an error is returned.
 func fetchResource(url string) (string, error) {
+	// Keep the default proxy/dial policy, but use the same TLS compatibility
+	// policy as the tunnel. Do not mutate http.DefaultTransport globally.
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	tr.TLSClientConfig = tlscompat.Config()
+	tr.TLSHandshakeTimeout = fetchTimeout
+	defer tr.CloseIdleConnections()
 	client := &http.Client{
-		Timeout: fetchTimeout,
+		Timeout:   fetchTimeout,
+		Transport: tr,
 	}
 	resp, err := client.Get(url)
 	if err != nil {
