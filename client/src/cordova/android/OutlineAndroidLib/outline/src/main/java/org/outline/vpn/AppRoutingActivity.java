@@ -45,6 +45,8 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import java.text.Collator;
 import java.util.ArrayList;
@@ -56,7 +58,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.outline.R;
 
-/** Android-only screen for selecting applications that should bypass the VPN. */
+/** Android-only screen for selecting which applications use or bypass the VPN. */
 public class AppRoutingActivity extends Activity {
   // Same light palette as the web shell. Time-of-day scenes do not change the UI theme.
   private static final int ACCENT_COLOR = Color.rgb(83, 118, 41);
@@ -69,7 +71,9 @@ public class AppRoutingActivity extends Activity {
 
   private final ExecutorService executor = Executors.newSingleThreadExecutor();
   private final List<ApplicationItem> allApps = new ArrayList<>();
-  private final Set<String> bypassedPackages = new HashSet<>();
+  private final Set<String> selectedPackages = new HashSet<>();
+  private boolean vpnOnly;
+  private TextView description;
 
   private AppListAdapter adapter;
   private TextView selectedCount;
@@ -97,6 +101,7 @@ public class AppRoutingActivity extends Activity {
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    vpnOnly = AppRoutingPreferences.isVpnOnly(this);
     configureColors();
     setContentView(buildContentView());
     loadApplications();
@@ -181,8 +186,26 @@ public class AppRoutingActivity extends Activity {
     summaryParams.setMargins(dp(12), dp(16), dp(12), dp(12));
     root.addView(summary, summaryParams);
 
-    TextView description = new TextView(this);
-    description.setText(R.string.app_routing_description);
+    RadioGroup modes = new RadioGroup(this);
+    modes.setOrientation(RadioGroup.VERTICAL);
+    modes.addView(modeButton(R.id.app_routing_mode_bypass, R.string.app_routing_mode_bypass));
+    modes.addView(modeButton(R.id.app_routing_mode_only, R.string.app_routing_mode_only));
+    modes.check(vpnOnly ? R.id.app_routing_mode_only : R.id.app_routing_mode_bypass);
+    summary.addView(modes);
+    modes.setOnCheckedChangeListener((group, checkedId) -> {
+      boolean next = checkedId == R.id.app_routing_mode_only;
+      if (next == vpnOnly) return;
+      vpnOnly = next;
+      AppRoutingPreferences.setVpnOnly(this, vpnOnly);
+      selectedPackages.clear();
+      selectedPackages.addAll(AppRoutingPreferences.getSelectedPackages(this, vpnOnly));
+      if (adapter != null) adapter.notifyDataSetChanged();
+      updateSelectedCount();
+      showReconnectMessage();
+    });
+
+    description = new TextView(this);
+    description.setPadding(0, dp(8), 0, 0);
     description.setTextSize(15);
     description.setTextColor(SECONDARY_TEXT_COLOR);
     description.setLineSpacing(dp(2), 1);
@@ -301,7 +324,6 @@ public class AppRoutingActivity extends Activity {
           Collator collator = Collator.getInstance(Locale.getDefault());
           loadedApps.sort((first, second) -> collator.compare(first.label, second.label));
           AppRoutingPreferences.initializeDefaultsIfNeeded(this, installedPackages);
-          Set<String> storedBypasses = AppRoutingPreferences.getBypassedPackages(this);
 
           runOnUiThread(
               () -> {
@@ -310,8 +332,8 @@ public class AppRoutingActivity extends Activity {
                 }
                 allApps.clear();
                 allApps.addAll(loadedApps);
-                bypassedPackages.clear();
-                bypassedPackages.addAll(storedBypasses);
+                selectedPackages.clear();
+                selectedPackages.addAll(AppRoutingPreferences.getSelectedPackages(this, vpnOnly));
                 adapter = new AppListAdapter();
                 appList.setAdapter(adapter);
                 adapter.filter(search.getText().toString());
@@ -332,23 +354,42 @@ public class AppRoutingActivity extends Activity {
     }
     int selected = 0;
     for (ApplicationItem item : allApps) {
-      if (bypassedPackages.contains(item.packageName)) {
+      if (selectedPackages.contains(item.packageName)) {
         selected++;
       }
     }
-    selectedCount.setText(getString(R.string.app_routing_selected_count, selected, allApps.size()));
+    selectedCount.setText(getString(vpnOnly ? R.string.app_routing_allowed_count
+        : R.string.app_routing_selected_count, selected, allApps.size()));
+    description.setText(vpnOnly
+        ? (selected == 0 ? R.string.app_routing_only_empty : R.string.app_routing_only_description)
+        : R.string.app_routing_description);
   }
 
   private void toggle(ApplicationItem item) {
-    boolean shouldBypass = !bypassedPackages.contains(item.packageName);
-    if (shouldBypass) {
-      bypassedPackages.add(item.packageName);
+    boolean selected = !selectedPackages.contains(item.packageName);
+    if (selected) {
+      selectedPackages.add(item.packageName);
     } else {
-      bypassedPackages.remove(item.packageName);
+      selectedPackages.remove(item.packageName);
     }
-    AppRoutingPreferences.setPackageBypassed(this, item.packageName, shouldBypass);
+    AppRoutingPreferences.setPackageSelected(this, vpnOnly, item.packageName, selected);
     adapter.notifyDataSetChanged();
     updateSelectedCount();
+    showReconnectMessage();
+  }
+
+  private RadioButton modeButton(int id, int label) {
+    RadioButton button = new RadioButton(this);
+    button.setId(id);
+    button.setText(label);
+    button.setTextSize(15);
+    button.setTextColor(PRIMARY_TEXT_COLOR);
+    button.setButtonTintList(ColorStateList.valueOf(ACCENT_COLOR));
+    button.setMinHeight(dp(48));
+    return button;
+  }
+
+  private void showReconnectMessage() {
     reconnectMessage.removeCallbacks(hideReconnectMessage);
     reconnectMessage.animate().cancel();
     if (reconnectMessage.getVisibility() != View.VISIBLE) {
@@ -430,16 +471,16 @@ public class AppRoutingActivity extends Activity {
       ApplicationItem item = getItem(position);
       holder.label.setText(item.label);
       holder.packageName.setText(item.packageName);
-      holder.checkbox.setChecked(bypassedPackages.contains(item.packageName));
+      holder.checkbox.setChecked(selectedPackages.contains(item.packageName));
       holder.root.setBackgroundColor(
-          bypassedPackages.contains(item.packageName) ? SELECTED_COLOR : CARD_COLOR);
+          selectedPackages.contains(item.packageName) ? SELECTED_COLOR : CARD_COLOR);
       holder.icon.setImageDrawable(loadIcon(item.packageName));
       holder.root.setOnClickListener(view -> toggle(item));
       holder.root.setContentDescription(
           item.label
               + ", "
               + getString(
-                  bypassedPackages.contains(item.packageName)
+                  selectedPackages.contains(item.packageName) != vpnOnly
                       ? R.string.app_routing_bypassed
                       : R.string.app_routing_via_vpn));
       return convertView;

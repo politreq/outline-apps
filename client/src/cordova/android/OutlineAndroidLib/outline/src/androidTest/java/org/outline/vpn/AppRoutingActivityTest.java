@@ -13,6 +13,9 @@ import android.widget.ListView;
 import android.widget.TextView;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -111,5 +114,58 @@ public class AppRoutingActivityTest {
       if (!loaded.get()) SystemClock.sleep(50);
     }
     assertTrue("Installed apps must load", loaded.get());
+  }
+
+  @Test
+  public void vpnOnlyModeSavesIndependentlyAndSurvivesRecreation() throws Exception {
+    try (ActivityScenario<AppRoutingActivity> scenario =
+        ActivityScenario.launch(AppRoutingActivity.class)) {
+      waitForApps(scenario);
+      final String[] selectedPackage = new String[1];
+      scenario.onActivity(activity -> {
+        activity.findViewById(R.id.app_routing_mode_only).performClick();
+        assertTrue(AppRoutingPreferences.isVpnOnly(activity));
+        assertEquals(View.VISIBLE,
+            activity.findViewById(R.id.app_routing_reconnect_message).getVisibility());
+        ListView list = activity.findViewById(R.id.app_routing_list);
+        View row = list.getAdapter().getView(0, null, list);
+        android.widget.LinearLayout labels =
+            (android.widget.LinearLayout) ((android.widget.LinearLayout) row).getChildAt(1);
+        selectedPackage[0] = ((TextView) labels.getChildAt(1)).getText().toString();
+        assertFalse(AppRoutingPreferences.getSelectedPackages(activity, true)
+            .contains(selectedPackage[0]));
+        row.performClick();
+        assertTrue(AppRoutingPreferences.hasInstalledVpnApps(activity));
+        // Rebinding refreshes the announced routing, not only the visual checkbox.
+        row = list.getAdapter().getView(0, row, list);
+        assertTrue(row.getContentDescription().toString().contains("через VPN"));
+        activity.findViewById(R.id.app_routing_mode_bypass).performClick();
+        assertFalse(AppRoutingPreferences.isVpnOnly(activity));
+        activity.findViewById(R.id.app_routing_mode_only).performClick();
+      });
+      scenario.recreate();
+      waitForApps(scenario);
+      // Keep a screenshot of the real native screen for visual QA.
+      InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+      android.graphics.Bitmap screenshot =
+          InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
+      assertNotNull(screenshot);
+      File image = new File(InstrumentationRegistry.getInstrumentation().getTargetContext()
+          .getExternalFilesDir(null), "app-routing-vpn-only.png");
+      try (FileOutputStream output = new FileOutputStream(image)) {
+        assertTrue(screenshot.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, output));
+      } finally {
+        screenshot.recycle();
+      }
+      scenario.onActivity(activity -> {
+        assertTrue(AppRoutingPreferences.isVpnOnly(activity));
+        assertTrue(AppRoutingPreferences.getSelectedPackages(activity, true)
+            .contains(selectedPackage[0]));
+        TextView count = activity.findViewById(R.id.app_routing_count);
+        assertTrue(count.getText().toString().startsWith("Через VPN: 1"));
+        AppRoutingPreferences.setPackageSelected(activity, true, selectedPackage[0], false);
+        AppRoutingPreferences.setVpnOnly(activity, false);
+      });
+    }
   }
 }
