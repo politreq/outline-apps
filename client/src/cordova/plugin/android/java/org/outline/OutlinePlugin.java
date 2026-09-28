@@ -313,9 +313,24 @@ public class OutlinePlugin extends CordovaPlugin {
     tunnelConfig.name = serverName;
     tunnelConfig.transportConfig = transportConfig;
     AppRoutingPreferences.initializeDefaultsIfNeeded(getBaseContext());
-    tunnelConfig.disallowedApplications =
-        AppRoutingPreferences.getBypassedPackages(getBaseContext()).toArray(new String[0]);
-    Arrays.sort(tunnelConfig.disallowedApplications);
+    boolean vpnOnly = AppRoutingPreferences.isVpnOnly(getBaseContext());
+    if (vpnOnly && !AppRoutingPreferences.hasInstalledVpnApps(getBaseContext())) {
+      cordova.getActivity().runOnUiThread(() -> {
+        cordova.getActivity().startActivity(new Intent(cordova.getActivity(), AppRoutingActivity.class));
+        android.widget.Toast.makeText(getBaseContext(), org.outline.R.string.app_routing_only_empty,
+            android.widget.Toast.LENGTH_LONG).show();
+      });
+      return Errors.toDetailedJsonError(new PlatformError(
+          Platerrors.InvalidConfig, "Select an app in VPN for applications"));
+    }
+    String[] packages = AppRoutingPreferences.getSelectedPackages(getBaseContext(), vpnOnly)
+        .toArray(new String[0]);
+    Arrays.sort(packages);
+    if (vpnOnly) {
+      tunnelConfig.allowedApplications = packages;
+    } else {
+      tunnelConfig.disallowedApplications = packages;
+    }
     return vpnTunnelService.startTunnel(tunnelConfig);
   }
 

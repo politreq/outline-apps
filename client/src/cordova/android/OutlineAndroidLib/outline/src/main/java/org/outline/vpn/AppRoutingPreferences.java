@@ -23,11 +23,13 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-/** Persists the packages that the user wants Android to route outside the VPN. */
+/** Persists independent selections for the two app routing modes. */
 public final class AppRoutingPreferences {
   private static final String PREFERENCES_NAME = "app_routing";
   private static final String INITIALIZED_KEY = "defaults_initialized";
   private static final String BYPASSED_PACKAGES_KEY = "bypassed_packages";
+  private static final String VPN_ONLY_KEY = "vpn_only";
+  private static final String ALLOWED_PACKAGES_KEY = "allowed_packages";
 
   private AppRoutingPreferences() {}
 
@@ -74,6 +76,48 @@ public final class AppRoutingPreferences {
 
   public static boolean isPackageBypassed(Context context, String packageName) {
     return getBypassedPackages(context).contains(packageName);
+  }
+
+  public static boolean isVpnOnly(Context context) {
+    // Existing installations keep their bypass rules unchanged.
+    return getPreferences(context).getBoolean(VPN_ONLY_KEY, false);
+  }
+
+  public static void setVpnOnly(Context context, boolean vpnOnly) {
+    getPreferences(context).edit().putBoolean(VPN_ONLY_KEY, vpnOnly).commit();
+  }
+
+  public static Set<String> getSelectedPackages(Context context, boolean vpnOnly) {
+    return new HashSet<>(getPreferences(context).getStringSet(
+        vpnOnly ? ALLOWED_PACKAGES_KEY : BYPASSED_PACKAGES_KEY, Set.of()));
+  }
+
+  public static boolean hasInstalledVpnApps(Context context) {
+    for (String packageName : getSelectedPackages(context, true)) {
+      if (packageName.equals(context.getPackageName())) continue;
+      try {
+        context.getPackageManager().getApplicationInfo(packageName, 0);
+        return true;
+      } catch (PackageManager.NameNotFoundException ignored) {
+        // A saved app may have been uninstalled since it was selected.
+      }
+    }
+    return false;
+  }
+
+  public static synchronized void setPackageSelected(
+      Context context, boolean vpnOnly, String packageName, boolean selected) {
+    if (packageName == null || packageName.isEmpty() || packageName.equals(context.getPackageName())) {
+      return;
+    }
+    Set<String> packages = getSelectedPackages(context, vpnOnly);
+    if (selected) {
+      packages.add(packageName);
+    } else {
+      packages.remove(packageName);
+    }
+    getPreferences(context).edit().putStringSet(
+        vpnOnly ? ALLOWED_PACKAGES_KEY : BYPASSED_PACKAGES_KEY, packages).commit();
   }
 
   public static void setPackageBypassed(Context context, String packageName, boolean isBypassed) {

@@ -19,4 +19,6 @@ parcelable TunnelConfig {
   String name;
   String transportConfig;
   String[] disallowedApplications;
+  // null = bypass mode (legacy); non-null = VPN only for this list.
+  String[] allowedApplications;
 }

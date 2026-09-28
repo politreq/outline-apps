@@ -24,6 +24,13 @@
         <item name="android:fontFamily">sans</item>
     </style>
     <item type="id" name="app_routing_root" />
+    <item type="id" name="app_routing_mode_bypass" />
+    <item type="id" name="app_routing_mode_only" />
+    <string name="app_routing_mode_bypass">Без VPN для выбранных</string>
+    <string name="app_routing_mode_only">VPN только для выбранных</string>
+    <string name="app_routing_only_description">Только отмеченные приложения используют VPN. Все остальные подключаются напрямую.</string>
+    <string name="app_routing_only_empty">Выберите хотя бы одно приложение для VPN. Все остальные будут подключаться напрямую.</string>
+    <string name="app_routing_allowed_count">Через VPN: %1$d из %2$d</string>
     <item type="id" name="app_routing_header" />
     <item type="id" name="app_routing_back_button" />
     <item type="id" name="app_routing_title_text" />
